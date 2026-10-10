@@ -1,0 +1,3706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gatinhos Conectados 🐾 Joguinho de Casal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#faf5eb',
+            'paper-card': '#fffdf9',
+            pencil: '#2d2724',
+            amberc: '#d9822b',
+            roseheart: '#e76f51',
+            mintlove: '#2a9d8f'
+          },
+          fontFamily: {
+            hand: ['"Patrick Hand"', 'cursive'],
+            caveat: ['"Caveat"', 'cursive'],
+            sans: ['"Quicksand"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --charcoal: #2d2724;
+      --amber: #c48b36;
+    }
+    body {
+      background-color: #f7efe1;
+      background-image: 
+        radial-gradient(circle, #ded2bf 1.2px, transparent 1.2px),
+        linear-gradient(to right, rgba(140, 120, 100, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(140, 120, 100, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px, 24px 24px, 24px 24px;
+      font-family: 'Quicksand', sans-serif;
+      color: var(--charcoal);
+      user-select: none;
+    }
+    .sketch-border {
+      border: 2px solid var(--charcoal);
+      box-shadow: 3px 4px 0 rgba(45, 39, 36, 0.85);
+    }
+    .sketch-btn {
+      border: 2px solid var(--charcoal);
+      box-shadow: 2px 3px 0 rgba(45, 39, 36, 0.9);
+      transition: all 0.15s ease-in-out;
+    }
+    .sketch-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0 1px 0 rgba(45, 39, 36, 0.9);
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.025, 0.98); }
+    }
+    @keyframes tailWag {
+      0% { transform: rotate(-6deg); }
+      50% { transform: rotate(5deg); }
+      100% { transform: rotate(-8deg); }
+    }
+    @keyframes naturalBlink {
+      0%, 94%, 98%, 100% { transform: scaleY(1); }
+      96% { transform: scaleY(0.08); }
+    }
+    .anim-body { animation: breathe 3.6s ease-in-out infinite; transform-origin: 100px 145px; }
+    .anim-tail { animation: tailWag 3.2s ease-in-out infinite alternate; transform-origin: 135px 150px; }
+    .anim-blink { animation: naturalBlink 4.2s infinite; transform-origin: 95px 95px; }
+    
+    .cat-drop-target.drag-over {
+      transform: scale(1.06);
+      filter: drop-shadow(0 0 12px rgba(217, 130, 43, 0.7));
+    }
+    .stall-canopy {
+      background: repeating-linear-gradient(-45deg, #c0392b, #c0392b 16px, #faf5eb 16px, #faf5eb 32px);
+      border-bottom: 3px solid var(--charcoal);
+    }
+    .chat-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-scroll::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.04);
+      border-radius: 8px;
+    }
+    .chat-scroll::-webkit-scrollbar-thumb {
+      background: #d4a373;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-5 overflow-x-hidden relative pb-28">
+
+  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-20"></canvas>
+
+  <!-- Top Header com Moedas e Status da Conexão Diária -->
+  <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-3 bg-paper-card p-3 sm:p-4 rounded-2xl sketch-border z-30">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">🐾</span>
+      <div>
+        <h1 class="font-caveat text-2xl sm:text-3xl font-bold leading-tight text-pencil">Jardim dos Gatinhos</h1>
+        <p class="text-[11px] sm:text-xs text-pencil/70 font-medium flex items-center gap-1">
+          <span id="cloud-sync-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+          <span id="cloud-sync-status-text">Conectando à nuvem...</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Carteiras Salvas no Firestore (Individual e Casal) + Vínculo -->
+    <div class="flex items-center gap-2 flex-wrap text-xs font-bold">
+      <!-- Saldo no Firestore com Botão de Recompensa Diária (Zero Inicial) -->
+      <div class="bg-amber-100/90 text-amber-950 border border-amber-300 px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-sm">
+        <span title="Peixinhos (Visuais)">🐟 <span id="wallet-fish-display">0</span></span>
+        <button onclick="claimDailyRewardManual()" title="Resgatar Peixinho Diário (1 por dia)" class="bg-amber-200 hover:bg-amber-300 border border-amber-400 px-1.5 py-0.5 rounded text-[11px] sketch-btn">
+          🎁 +1
+        </button>
+        <span title="Patinhas (Comidas)">🐾 <span id="wallet-paws-display">0</span></span>
+        <span title="Laço de Casal (Metadinhas)" class="text-rose-700 font-extrabold border-l border-amber-300 pl-2">💖 <span id="wallet-couple-display">0</span></span>
+      </div>
+
+      <!-- Badge de Conexão Diária (NFC / Código) -->
+      <button onclick="openSyncModal()" id="daily-lock-badge" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 sketch-btn">
+        <span id="daily-lock-icon">🔒</span>
+        <span id="daily-lock-text">Sincronizar Hoje</span>
+      </button>
+
+      <button onclick="toggleMyIdentity()" class="sketch-btn bg-white hover:bg-amber-50 px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1">
+        <span>👤 Eu sou:</span>
+        <span id="header-my-role-label" class="text-rose-600">Gatinho 1</span>
+      </button>
+
+      <!-- Botão de Bloquear / Sair com Senha -->
+      <button onclick="lockAndLogout()" title="Bloquear tela com senha" class="sketch-btn bg-stone-100 hover:bg-stone-200 px-2 py-1.5 rounded-xl font-bold text-xs text-stone-700">
+        🔒 Sair
+      </button>
+
+      <!-- Botão com Contador de Cartinhas -->
+      <button onclick="openLetterModal()" class="sketch-btn bg-rose-100 hover:bg-rose-200 px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 text-rose-800 relative">
+        <span>💌 Cartas</span>
+        <span id="letters-count-pill" class="bg-rose-500 text-white rounded-full text-[10px] px-1.5 py-0.2 font-black leading-tight ml-0.5">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner de Orientação para Regras do Firebase -->
+  <div id="permission-warning-banner" class="hidden my-2 w-full max-w-xl bg-amber-50 border-2 border-amber-500 rounded-2xl p-3 text-xs text-amber-900 shadow-md z-30">
+    <div class="flex items-start gap-2">
+      <span class="text-xl">⚠️</span>
+      <div class="space-y-1">
+        <p class="font-bold">Permissão necessária nas Regras do Firebase Firestore:</p>
+        <p class="text-[11px] leading-tight">
+          Vá em <strong>Firebase Console &gt; Firestore Database &gt; Regras</strong>, altere para <code class="bg-amber-200 px-1 py-0.5 rounded font-mono">allow read, write: if true;</code> e clique em <strong>Publicar</strong>.
+        </p>
+      </div>
+      <button onclick="document.getElementById('permission-warning-banner').classList.add('hidden')" class="text-stone-500 font-bold ml-auto">&times;</button>
+    </div>
+  </div>
+
+  <!-- Toast de Notificações Rápidas -->
+  <div id="interaction-banner" class="opacity-0 transition-opacity duration-300 my-2 px-4 py-1.5 rounded-full bg-white/95 sketch-border text-sm font-hand text-lg text-rose-600 flex items-center gap-2 z-30">
+    <span id="interaction-banner-text">Miau! 💖</span>
+  </div>
+
+  <!-- Jardim Principal com os Gatinhos -->
+  <main class="w-full max-w-4xl my-2 flex-1 flex flex-col justify-center items-center relative z-10">
+    <div class="w-full bg-[#e8eed9] rounded-3xl sketch-border p-4 sm:p-6 relative overflow-hidden min-h-[420px] flex flex-col justify-between"
+         style="box-shadow: inset 0 0 40px rgba(119, 143, 85, 0.25), 4px 6px 0 #2d2724;">
+      
+      <div class="absolute top-4 left-6 opacity-30 text-3xl select-none">🌿</div>
+      <div class="absolute top-12 right-10 opacity-30 text-3xl select-none">🌸</div>
+      <div class="absolute bottom-6 left-12 opacity-30 text-2xl select-none">🍄</div>
+      <div class="absolute bottom-10 right-20 opacity-30 text-2xl select-none">🌼</div>
+
+      <!-- Love meter in center + Streak badge -->
+      <div class="w-full flex flex-col sm:flex-row items-center justify-center gap-3 mb-2">
+        <div class="bg-white/90 backdrop-blur-sm sketch-border px-3.5 py-1.5 rounded-2xl flex items-center gap-2 text-xs font-bold cursor-pointer" onclick="openPartnerProfileModal()">
+          <span class="text-lg">🔥</span>
+          <span id="header-streak-badge">1 Dia de Streak</span>
+          <span class="text-[10px] text-pencil/60">▶ Ver Diário</span>
+        </div>
+
+        <div class="bg-white/90 backdrop-blur-sm sketch-border px-4 py-1.5 rounded-2xl flex items-center gap-3">
+          <span class="text-xl">💞</span>
+          <div class="flex flex-col">
+            <div class="flex justify-between items-center text-xs font-bold gap-4">
+              <span>Sintonia do Casal</span>
+              <span id="love-percent-text">85%</span>
+            </div>
+            <div class="w-36 sm:w-48 bg-stone-200 h-2.5 rounded-full border border-pencil overflow-hidden mt-1">
+              <div id="love-progress-bar" class="bg-gradient-to-r from-rose-400 to-rose-600 h-full w-[85%] transition-all duration-500"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Área dos Dois Gatos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full my-auto items-center">
+        
+        <!-- GATO 1 -->
+        <div id="cat1-container-box" class="flex flex-col items-center group relative p-3 rounded-2xl bg-white/40 backdrop-blur-[2px] border border-black/10">
+          <div class="absolute -top-3 bg-amber-400 text-pencil font-bold text-xs px-3 py-0.5 rounded-full sketch-border z-10 flex items-center gap-1">
+            <span id="cat1-title-label">Gatinho 1</span>
+            <span id="cat1-tag-role" class="text-[10px] bg-white/70 px-1 rounded">(Você)</span>
+          </div>
+
+          <!-- Balão de Fala Dinâmico (Clique para abrir histórico de cartas) -->
+          <div id="speech-cat1" onclick="openLetterModal()" title="Toque para ver histórico de cartas" 
+               class="mb-2 px-3 py-1 rounded-2xl bg-white sketch-border text-xs sm:text-sm font-hand max-w-[210px] text-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-sm">
+            Ronronando baixinho... 🐾
+          </div>
+
+          <!-- Drop target do Gato 1 para alimentação -->
+          <div id="cat1-drop-area" class="cat-drop-target w-44 h-44 sm:w-52 sm:h-52 cursor-pointer relative transition-transform duration-200"
+               onclick="handleCatPet('cat1', event)" title="Toque para carinho ou arraste comida aqui!">
+            <div id="cat1-svg-mount" class="w-full h-full"></div>
+            <span class="absolute bottom-1 right-2 text-[10px] bg-white/90 px-2 py-0.5 rounded-full border border-pencil/40 text-pencil">
+              Carinho / Solte comida 🐟
+            </span>
+
+            <!-- Overlay de Bloqueio se parceiro não validou hoje -->
+            <div id="cat1-locked-overlay" class="hidden absolute inset-0 bg-stone-900/60 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center text-center p-3 text-white border-2 border-dashed border-amber-300">
+              <span class="text-3xl mb-1">💤</span>
+              <span class="text-xs font-bold leading-tight">O gatinho do seu amor está descansando!</span>
+              <button onclick="openSyncModal()" class="mt-2 text-[11px] bg-amber-500 hover:bg-amber-600 px-2.5 py-1 rounded-lg font-bold shadow">
+                Sincronizar Presença Hoje 🐾
+              </button>
+            </div>
+          </div>
+
+          <!-- Barras de Status Cat 1 -->
+          <div class="w-full max-w-[220px] bg-white/90 p-2.5 rounded-xl sketch-border mt-2 space-y-1.5 text-xs font-semibold">
+            <div class="flex justify-between items-center">
+              <span>Fome 🐟</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat1-hunger-bar" class="h-full bg-amber-500 w-[75%] transition-all"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Energia ⚡</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat1-energy-bar" class="h-full bg-blue-500 w-[80%] transition-all"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Felicidade 💖</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat1-happy-bar" class="h-full bg-rose-500 w-[90%] transition-all"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GATO 2 -->
+        <div id="cat2-container-box" class="flex flex-col items-center group relative p-3 rounded-2xl bg-white/40 backdrop-blur-[2px] border border-black/10">
+          <div class="absolute -top-3 bg-rose-400 text-white font-bold text-xs px-3 py-0.5 rounded-full sketch-border z-10 flex items-center gap-1">
+            <span id="cat2-title-label">Gatinho 2</span>
+            <span id="cat2-tag-role" class="text-[10px] bg-black/20 px-1 rounded">(Amor)</span>
+          </div>
+
+          <!-- Balão de Fala Dinâmico (Clique para abrir histórico de cartas) -->
+          <div id="speech-cat2" onclick="openLetterModal()" title="Toque para ver histórico de cartas" 
+               class="mb-2 px-3 py-1 rounded-2xl bg-white sketch-border text-xs sm:text-sm font-hand max-w-[210px] text-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 shadow-sm">
+            Esperando você chegar... 💖
+          </div>
+
+          <!-- Drop target do Gato 2 para alimentação -->
+          <div id="cat2-drop-area" class="cat-drop-target w-44 h-44 sm:w-52 sm:h-52 cursor-pointer relative transition-transform duration-200"
+               onclick="handleCatPet('cat2', event)" title="Toque para carinho ou arraste comida aqui!">
+            <div id="cat2-svg-mount" class="w-full h-full"></div>
+            <span class="absolute bottom-1 right-2 text-[10px] bg-white/90 px-2 py-0.5 rounded-full border border-pencil/40 text-pencil">
+              Carinho / Solte comida 🐟
+            </span>
+
+            <!-- Overlay de Bloqueio se parceiro não validou hoje -->
+            <div id="cat2-locked-overlay" class="hidden absolute inset-0 bg-stone-900/60 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center text-center p-3 text-white border-2 border-dashed border-rose-300">
+              <span class="text-3xl mb-1">💤</span>
+              <span class="text-xs font-bold leading-tight">O gatinho do seu amor está descansando!</span>
+              <button onclick="openSyncModal()" class="mt-2 text-[11px] bg-rose-500 hover:bg-rose-600 px-2.5 py-1 rounded-lg font-bold shadow">
+                Sincronizar Presença Hoje 🐾
+              </button>
+            </div>
+          </div>
+
+          <!-- Barras de Status Cat 2 -->
+          <div class="w-full max-w-[220px] bg-white/90 p-2.5 rounded-xl sketch-border mt-2 space-y-1.5 text-xs font-semibold">
+            <div class="flex justify-between items-center">
+              <span>Fome 🐟</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat2-hunger-bar" class="h-full bg-amber-500 w-[60%] transition-all"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Energia ⚡</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat2-energy-bar" class="h-full bg-blue-500 w-[70%] transition-all"></div>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Felicidade 💖</span>
+              <div class="w-24 bg-stone-200 h-2 rounded-full border border-pencil overflow-hidden">
+                <div id="cat2-happy-bar" class="h-full bg-rose-500 w-[85%] transition-all"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mochila de Comidinhas Retrátil (Sincronizada no Firestore) -->
+      <div id="backpack-drawer" class="w-full bg-[#5e3b22] text-[#fae19c] p-3 rounded-2xl border-2 border-[#381f10] shadow-md mt-4 transition-all">
+        <div class="flex items-center justify-between pb-2 border-b border-[#fae19c]/30 text-xs font-bold">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎒</span>
+            <span>Mochila de Comidinhas (Nuvem ☁️)</span>
+            <span class="text-[10px] font-normal text-amber-200/80">(Arraste até qualquer um dos gatinhos!)</span>
+          </div>
+          <button onclick="toggleBackpack()" class="text-xs bg-[#7a4d2c] hover:bg-[#8f5a34] px-2.5 py-1 rounded-lg border border-[#fae19c]/40 text-[#fae19c]">
+            ✕ Fechar Mochila
+          </button>
+        </div>
+        
+        <div id="backpack-slots-container" class="flex gap-2.5 overflow-x-auto py-2.5 px-1 scrollbar-thin"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ================= DOCK FLUTUANTE DE ESCRITA VENDO OS GATINHOS ================= -->
+  <div id="floating-chat-container" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 w-[95%] max-w-lg bg-paper-card/95 backdrop-blur-md border-2 border-pencil rounded-2xl shadow-2xl p-2.5 z-40 space-y-2">
+    <div class="flex items-center justify-between border-b border-pencil/20 pb-1.5 px-1 text-xs">
+      <div class="flex items-center gap-1.5 font-bold text-rose-900">
+        <span class="animate-pulse">💌</span>
+        <span>Escrevendo com os gatinhos na tela</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button onclick="openLetterModal()" class="text-[11px] bg-amber-100 hover:bg-amber-200 border border-pencil px-2 py-0.5 rounded-lg font-bold text-amber-950">
+          📜 Histórico Completo
+        </button>
+        <button onclick="closeFloatingChat()" class="text-xs font-bold p-1 hover:text-rose-600">&times;</button>
+      </div>
+    </div>
+
+    <!-- Mini visualizador da última mensagem recebida -->
+    <div id="floating-recent-bubble" class="text-[11px] bg-white/90 border border-pencil/30 rounded-xl px-2.5 py-1 font-hand truncate text-pencil/80">
+      Nenhuma cartinha recente.
+    </div>
+
+    <!-- Reações rápidas na visualização dos gatos -->
+    <div class="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs">
+      <button onclick="insertQuickMessageFloating('Te amo muito meu amorzinho! 💖')" class="bg-white hover:bg-rose-100 border border-pencil/30 px-2 py-0.5 rounded-full whitespace-nowrap text-[10px]">
+        💖 Te amo
+      </button>
+      <button onclick="insertQuickMessageFloating('Saudades de você! Vem cá me dar um beijinho 🐾')" class="bg-white hover:bg-amber-100 border border-pencil/30 px-2 py-0.5 rounded-full whitespace-nowrap text-[10px]">
+        🐾 Saudades
+      </button>
+      <button onclick="insertQuickMessageFloating('Você é o amor da minha vida todinha! ✨')" class="bg-white hover:bg-purple-100 border border-pencil/30 px-2 py-0.5 rounded-full whitespace-nowrap text-[10px]">
+        ✨ Meu tudo
+      </button>
+    </div>
+
+    <!-- Campo de digitação rápida vendo os gatos -->
+    <div class="flex items-center gap-2">
+      <input type="text" id="floating-chat-input" maxlength="160" placeholder="Escreva e veja o gatinho dele(a) receber na hora..."
+             class="flex-1 bg-white border-2 border-pencil rounded-xl px-3 py-1.5 text-xs sm:text-sm font-hand text-pencil focus:outline-none focus:ring-2 focus:ring-rose-400">
+      <button onclick="sendLoveLetterFromFloating()" class="sketch-btn bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1 whitespace-nowrap shadow">
+        <span>Enviar</span>
+        <span>🐾</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de Ações Inferior Fixa -->
+  <nav class="fixed bottom-3 left-1/2 -translate-x-1/2 w-[95%] max-w-xl bg-paper-card border-2 border-pencil rounded-2xl shadow-xl p-2 flex justify-around items-center z-40 backdrop-blur-sm">
+    <button onclick="toggleBackpack()" class="sketch-btn bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center">
+      <span class="text-base sm:text-lg">🎒</span>
+      <span class="text-[10px] sm:text-xs">Mochila</span>
+    </button>
+    <button onclick="openFoodStallModal()" class="sketch-btn bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center text-rose-900">
+      <span class="text-base sm:text-lg">🏪</span>
+      <span class="text-[10px] sm:text-xs">Mercadinho</span>
+    </button>
+    <button onclick="openGamesHubModal()" class="sketch-btn bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center text-emerald-900">
+      <span class="text-base sm:text-lg">🎮</span>
+      <span class="text-[10px] sm:text-xs">Jogos</span>
+    </button>
+    <button onclick="openPartnerProfileModal()" class="sketch-btn bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center text-purple-900">
+      <span class="text-base sm:text-lg">📖</span>
+      <span class="text-[10px] sm:text-xs">Vínculo</span>
+    </button>
+    <button onclick="toggleFloatingChat()" class="sketch-btn bg-rose-100 hover:bg-rose-200 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center text-rose-900" title="Escrever vendo os gatinhos na tela">
+      <span class="text-base sm:text-lg">💬</span>
+      <span class="text-[10px] sm:text-xs">Chat Vivo</span>
+    </button>
+    <button onclick="openVipShopModal()" class="sketch-btn bg-amber-100 hover:bg-amber-200 px-2.5 py-1.5 rounded-xl text-xs font-bold flex flex-col items-center text-amber-950">
+      <span class="text-base sm:text-lg">✨</span>
+      <span class="text-[10px] sm:text-xs">Loja VIP</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODAIS ================= -->
+
+  <!-- MODAL DE IDENTIFICAÇÃO AO ENTRAR COM CRIAÇÃO/VERIFICAÇÃO DE SENHA DO CASAL -->
+  <div id="login-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-3 select-none">
+    <div class="bg-[#faf5eb] max-w-md w-full p-5 sm:p-6 rounded-3xl sketch-border space-y-4 text-center relative shadow-2xl">
+      <div class="space-y-1">
+        <span class="text-4xl block animate-bounce" id="login-modal-icon">🔐🐾</span>
+        <h2 class="font-caveat text-3xl font-bold text-pencil" id="login-modal-title">Cantinho Privado do Casal</h2>
+        <p class="text-xs text-pencil/70" id="login-modal-desc">Acesso protegido para ninguém mexer no jardim de vocês!</p>
+      </div>
+
+      <!-- Banner Informativo de Primeira Senha (visível apenas quando ainda não há senha definida) -->
+      <div id="first-time-pwd-banner" class="hidden bg-amber-100/90 border-2 border-dashed border-amber-500 rounded-2xl p-2.5 text-xs text-amber-950 text-left space-y-1">
+        <div class="font-bold flex items-center gap-1 text-amber-900">
+          <span>✨</span>
+          <span>Primeiro Acesso: Criem a Senha de Vocês!</span>
+        </div>
+        <p class="text-[11px] leading-tight text-amber-900/80">
+          Essa senha será salva na nuvem e será <b>a mesma para os dois</b>. Quem entrar depois usará essa mesma senha para acessar o cantinho de vocês!
+        </p>
+      </div>
+
+      <!-- Cards de Escolha de Identidade -->
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <button type="button" onclick="chooseProfileTarget('cat1')" id="login-card-cat1" 
+                class="p-3.5 rounded-2xl border-2 border-pencil bg-white hover:bg-amber-50 active:scale-95 transition-all flex flex-col items-center gap-2 group shadow-sm">
+          <div class="w-16 h-16 rounded-full bg-amber-100 border-2 border-pencil flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+            🐱
+          </div>
+          <div>
+            <span class="font-bold text-sm block text-amber-900" id="login-label-cat1">Gatinho 1</span>
+            <span class="text-[10px] text-pencil/60">(Ele)</span>
+          </div>
+          <span class="text-[10px] bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-bold">Sou Ele 🐾</span>
+        </button>
+
+        <button type="button" onclick="chooseProfileTarget('cat2')" id="login-card-cat2" 
+                class="p-3.5 rounded-2xl border-2 border-pencil bg-white hover:bg-rose-50 active:scale-95 transition-all flex flex-col items-center gap-2 group shadow-sm">
+          <div class="w-16 h-16 rounded-full bg-rose-100 border-2 border-pencil flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+            🌸
+          </div>
+          <div>
+            <span class="font-bold text-sm block text-rose-900" id="login-label-cat2">Gatinha 2</span>
+            <span class="text-[10px] text-pencil/60">(Ela)</span>
+          </div>
+          <span class="text-[10px] bg-rose-200 text-rose-950 px-2 py-0.5 rounded-full font-bold">Sou Ela 💖</span>
+        </button>
+      </div>
+
+      <!-- Campos de Apelido e Senha -->
+      <div class="bg-white/90 p-3.5 rounded-2xl border border-pencil/30 text-left space-y-2.5 shadow-sm">
+        <div>
+          <label class="text-[11px] font-bold text-pencil/80 block mb-0.5">Seu Apelido de Amor:</label>
+          <input type="text" id="login-nickname-input" placeholder="Ex: Meu Amor, Mô, Gatinho..." maxlength="15" 
+                 class="w-full text-xs p-2 rounded-xl border border-pencil text-pencil bg-paper focus:outline-none focus:ring-2 focus:ring-amber-400">
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-0.5">
+            <label class="text-[11px] font-bold text-rose-950 block" id="login-password-label">🔑 Senha Secreta do Casal:</label>
+            <span class="text-[10px] text-pencil/50 italic" id="login-password-hint">(Combinada entre vocês)</span>
+          </div>
+          <input type="password" id="login-password-input" placeholder="Digite a senha..." maxlength="30" 
+                 class="w-full text-xs p-2 rounded-xl border-2 border-pencil text-pencil bg-paper focus:outline-none focus:ring-2 focus:ring-rose-400 font-mono">
+        </div>
+
+        <!-- Campo de Confirmação de Senha (ativo quando for o primeiro cadastro) -->
+        <div id="login-password-confirm-box" class="hidden">
+          <label class="text-[11px] font-bold text-rose-950 block mb-0.5">🔑 Confirme a Senha:</label>
+          <input type="password" id="login-password-confirm-input" placeholder="Repita a senha escolhida..." maxlength="30" 
+                 class="w-full text-xs p-2 rounded-xl border-2 border-pencil text-pencil bg-paper focus:outline-none focus:ring-2 focus:ring-rose-400 font-mono">
+        </div>
+
+        <div id="login-error-msg" class="hidden text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-300 p-1.5 rounded-lg text-center">
+          Senha incorreta! Digite a senha combinada entre vocês.
+        </div>
+      </div>
+
+      <button type="button" onclick="submitSecureLogin()" id="login-submit-btn" class="sketch-btn w-full bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm py-2.5 rounded-2xl shadow">
+        Entrar no Jardim Protegido 🐾
+      </button>
+
+      <p class="text-[10px] text-pencil/60 italic" id="login-footnote">
+        A senha fica sincronizada na nuvem para garantir a privacidade de vocês dois.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODAL BARRAQUINHA DA FEIRA & MERCADINHO COMPLETO -->
+  <div id="food-stall-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fdf7ec] max-w-md w-full rounded-2xl sketch-border overflow-hidden relative shadow-2xl flex flex-col max-h-[92vh]">
+      <div class="stall-canopy h-8 w-full flex-shrink-0"></div>
+      
+      <div class="p-3 sm:p-4 space-y-3 overflow-y-auto">
+        <div class="flex justify-between items-start">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🧺</span>
+            <div>
+              <h3 class="font-caveat text-2xl font-bold text-amber-950">Feira & Tenda do Mercador Felino</h3>
+              <p class="text-[11px] text-pencil/70">Compre com suas Patinhas 🐾 da nuvem!</p>
+            </div>
+          </div>
+          <button onclick="closeFoodStallModal()" class="text-xl font-bold p-1">&times;</button>
+        </div>
+
+        <!-- Barraquinha com Balcão de Madeira e Vendedor Felino -->
+        <div class="relative bg-gradient-to-b from-[#e5f0d7] to-[#d8e6c5] border-2 border-stone-800 rounded-2xl overflow-hidden p-3 shadow-inner">
+          <div class="flex items-end justify-between gap-2">
+            <div class="w-24 h-24 relative flex-shrink-0">
+              <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow">
+                <path d="M 64,136 C 56,152 56,168 68,172 C 78,175 84,164 88,152 C 94,152 104,152 110,152 C 114,164 120,175 130,172 C 142,168 140,152 134,136 Z" fill="#fffdf9" stroke="#2b2725" stroke-width="4"/>
+                <polygon points="76,140 124,140 118,172 82,172" fill="#c0392b" stroke="#2b2725" stroke-width="2"/>
+                <path d="M 44,82 C 40,54 44,38 52,42 C 64,48 82,70 98,70 C 114,70 132,48 144,42 C 152,38 156,54 152,82 C 160,112 142,138 98,138 C 54,138 36,112 44,82 Z" fill="#fffdf9" stroke="#2b2725" stroke-width="4"/>
+                <polygon points="52,46 64,54 52,68" fill="#d97a36"/>
+                <polygon points="144,46 132,54 144,68" fill="#3d281d"/>
+                <circle cx="72" cy="74" r="10" fill="#d97a36" opacity="0.3"/>
+                <ellipse cx="72" cy="98" rx="14" ry="18" fill="#2b2725"/>
+                <ellipse cx="124" cy="98" rx="14" ry="18" fill="#2b2725"/>
+                <circle cx="76" cy="94" r="4.5" fill="#ffffff"/>
+                <circle cx="128" cy="94" r="4.5" fill="#ffffff"/>
+                <polygon points="95,112 101,112 98,116" fill="#e76f51"/>
+                <path d="M 92,118 Q 98,126 104,118" fill="none" stroke="#2b2725" stroke-width="3"/>
+                <line x1="42" y1="108" x2="22" y2="105" stroke="#2b2725" stroke-width="2"/>
+                <line x1="154" y1="108" x2="174" y2="105" stroke="#2b2725" stroke-width="2"/>
+                <polygon points="52,44 98,34 144,44 98,54" fill="#c0392b" stroke="#2b2725" stroke-width="2"/>
+              </svg>
+            </div>
+
+            <div class="bg-white p-2.5 rounded-2xl border-2 border-pencil text-xs font-hand text-sm flex-1 shadow-sm relative">
+              <span id="vendor-balloon-text">Miau! Tudo colhido com amor hoje! Escolha um lanchinho saboroso para vocês dois! 🍲</span>
+            </div>
+          </div>
+
+          <div class="w-full h-5 bg-[#8b5a2b] border-2 border-[#4a2e12] rounded-md mt-1 flex items-center justify-around px-2 shadow">
+            <span class="text-[10px] text-amber-200">🌿 Frutas</span>
+            <span class="text-[10px] text-amber-200">🐟 Sachês</span>
+            <span class="text-[10px] text-amber-200">🥛 Leite</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-60 overflow-y-auto p-1" id="stall-goods-grid"></div>
+
+        <div class="text-center pt-1 text-xs text-pencil/70">
+          Suas Patinhas: <span class="font-bold text-amber-900" id="stall-paws-count">0 🐾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LOJA VIP (SALVA NO FIRESTORE) -->
+  <div id="vip-shop-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fffdfa] max-w-lg w-full p-4 sm:p-5 rounded-2xl sketch-border space-y-3 relative max-h-[92vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">✨</span>
+          <div>
+            <h3 class="font-caveat text-2xl font-bold text-amber-950">Loja VIP & Ateliê de Beleza</h3>
+            <p class="text-[11px] text-pencil/70">Itens e tintas salvos na nuvem para o seu gatinho!</p>
+          </div>
+        </div>
+        <button onclick="closeVipShopModal()" class="text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <!-- Provador ao Vivo -->
+      <div class="w-full bg-[#f6eee2] border-2 border-pencil rounded-2xl p-3 flex items-center justify-between shadow-inner">
+        <div class="flex items-center gap-3">
+          <div id="shop-live-preview-box" class="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-xl border-2 border-pencil shadow flex items-center justify-center overflow-hidden flex-shrink-0"></div>
+          <div>
+            <span class="text-xs font-bold text-pencil block">Provador do seu Gatinho</span>
+            <span id="preview-item-description" class="text-[10px] text-pencil/70">Testando visual em tempo real</span>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1.5 text-xs font-bold">
+          <span class="bg-amber-100 text-amber-950 px-2.5 py-1 rounded-lg border border-amber-300 shadow-sm" id="shop-fish-count">0 🐟</span>
+          <span class="bg-rose-100 text-rose-900 px-2.5 py-1 rounded-lg border border-rose-300 shadow-sm" id="shop-couple-coin-count">0 💖</span>
+        </div>
+      </div>
+
+      <!-- Abas da Loja VIP -->
+      <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none border-b border-pencil/20">
+        <button onclick="switchShopTab('pupilas')" id="tab-pupilas" class="px-2.5 py-1 rounded-lg bg-amber-200 border border-pencil">Pupilas</button>
+        <button onclick="switchShopTab('olhos')" id="tab-olhos" class="px-2.5 py-1 rounded-lg bg-white border border-pencil">Formato/Olhos</button>
+        <button onclick="switchShopTab('metadinhas')" id="tab-metadinhas" class="px-2.5 py-1 rounded-lg bg-white border border-pencil text-rose-800">Metadinhas 💖</button>
+        <button onclick="switchShopTab('acessorios')" id="tab-acessorios" class="px-2.5 py-1 rounded-lg bg-white border border-pencil">Acessórios</button>
+        <button onclick="switchShopTab('racas')" id="tab-racas" class="px-2.5 py-1 rounded-lg bg-white border border-pencil">Pelagens</button>
+        <button onclick="switchShopTab('bocas')" id="tab-bocas" class="px-2.5 py-1 rounded-lg bg-white border border-pencil">Bocas</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto grid grid-cols-2 gap-2.5 p-1" id="shop-items-grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PALETAS (CORES E TINTAS) -->
+  <div id="palette-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fffdf9] max-w-sm w-full p-4 rounded-2xl sketch-border space-y-3 text-center">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-1">
+        <h3 class="font-caveat text-2xl font-bold text-pencil" id="palette-title">Tinta & Cor da Pupila</h3>
+        <button onclick="closePaletteModal()" class="text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-pencil/70" id="palette-subtitle">Escolha uma cor para sua pupila ou compre uma tinta personalizada (1 🐟):</p>
+      
+      <div class="grid grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1" id="palette-swatches-grid"></div>
+
+      <div class="border-t border-dashed border-pencil/30 pt-2 flex items-center justify-center gap-2">
+        <label class="text-xs font-bold">Cor Livre:</label>
+        <input type="color" id="custom-color-picker" value="#ffffff" class="w-8 h-8 rounded border border-pencil cursor-pointer">
+        <button onclick="buyCustomHexColor()" class="sketch-btn bg-amber-100 hover:bg-amber-200 text-xs px-2.5 py-1 rounded-lg font-bold">
+          Comprar Tinta (1 🐟)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL VÍNCULO DO CASAL (PERFIL, STREAK E PLACAR) -->
+  <div id="partner-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fffdf6] max-w-md w-full p-4 sm:p-5 rounded-3xl sketch-border space-y-4 relative max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b-2 border-pencil/20 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-3xl">📖</span>
+          <div>
+            <h3 class="font-caveat text-2xl font-bold text-purple-950">Diário do Nosso Vínculo</h3>
+            <p class="text-[11px] text-pencil/70">Nossa história sincronizada na nuvem</p>
+          </div>
+        </div>
+        <button onclick="closePartnerProfileModal()" class="text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <!-- Painel de Ofensiva (Streak) -->
+      <div class="bg-gradient-to-r from-orange-100 via-rose-100 to-amber-100 border-2 border-pencil rounded-2xl p-3.5 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-900">Chama de Conexão</span>
+          <span class="text-xs bg-white/90 px-2 py-0.5 rounded-full border border-pencil font-bold">Check-in Diário ✓</span>
+        </div>
+        
+        <div class="flex items-center justify-around text-center py-1">
+          <div>
+            <div class="text-2xl font-black text-rose-600 flex items-center justify-center gap-1">
+              <span>🔥</span> <span id="streak-current-display">1</span>
+            </div>
+            <span class="text-[11px] font-semibold text-pencil/80">Dias Seguidos</span>
+          </div>
+          <div class="border-l border-pencil/30 h-8"></div>
+          <div>
+            <div class="text-xl font-bold text-amber-700" id="streak-best-display">1</div>
+            <span class="text-[11px] font-semibold text-pencil/80">Maior Recorde</span>
+          </div>
+          <div class="border-l border-pencil/30 h-8"></div>
+          <div>
+            <div class="text-xl font-bold text-purple-700" id="streak-total-display">1</div>
+            <span class="text-[11px] font-semibold text-pencil/80">Total de Dias</span>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-pencil/70 text-center italic bg-white/50 p-1.5 rounded-xl">
+          "Conectem-se todos os dias para acumular Corações Dourados 💖 de casal!"
+        </p>
+      </div>
+
+      <!-- Placar Amigável de Jogos -->
+      <div class="bg-white border-2 border-pencil rounded-2xl p-3 space-y-2">
+        <h4 class="text-xs font-bold text-pencil flex items-center justify-between">
+          <span>🏆 Placar Amigável de Jogos</span>
+          <span class="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-300">
+            Campeão dos Novelos da Semana
+          </span>
+        </h4>
+
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="bg-amber-50 p-2 rounded-xl border border-pencil">
+            <span class="font-bold text-[11px] block" id="score-cat1-name-label">Gatinho 1</span>
+            <span class="text-lg font-black text-amber-800" id="score-cat1-wins">0</span>
+            <span class="text-[10px] text-pencil/70 block">Vitórias</span>
+          </div>
+          <div class="bg-stone-50 p-2 rounded-xl border border-pencil">
+            <span class="font-bold text-[11px] block">Empates</span>
+            <span class="text-lg font-black text-stone-700" id="score-ties">0</span>
+            <span class="text-[10px] text-pencil/70 block">Partidas</span>
+          </div>
+          <div class="bg-rose-50 p-2 rounded-xl border border-pencil">
+            <span class="font-bold text-[11px] block" id="score-cat2-name-label">Gatinho 2</span>
+            <span class="text-lg font-black text-rose-800" id="score-cat2-wins">0</span>
+            <span class="text-[10px] text-pencil/70 block">Vitórias</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Economia de Casal -->
+      <div class="bg-rose-50 border-2 border-pencil rounded-2xl p-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-3xl">💖</span>
+          <div>
+            <h4 class="text-xs font-bold text-rose-900">Seus Corações de Casal</h4>
+            <p class="text-[11px] text-pencil/70">Compre colares e laços de metadinha na Loja VIP!</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-sm font-black text-rose-700" id="profile-couple-coins">0 💖</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE VALIDAÇÃO DIÁRIA (NFC OU CÓDIGO DO DIA) -->
+  <div id="sync-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-paper-card max-w-sm w-full p-4 sm:p-5 rounded-3xl sketch-border space-y-3.5 text-center relative">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-2">
+        <h3 class="font-caveat text-2xl font-bold text-pencil">Conexão Diária de Presença 🐾</h3>
+        <button onclick="closeSyncModal()" class="text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <p class="text-xs text-pencil/80">
+        Para liberar o gatinho do seu amor hoje e alimentar o streak de vocês, aproximem os celulares via <b>NFC</b> ou digitem o código de 6 dígitos que seu amor te passou!
+      </p>
+
+      <div class="bg-emerald-50 border-2 border-emerald-600 rounded-2xl p-3 space-y-1.5">
+        <span class="text-2xl block">📲✨</span>
+        <h4 class="text-xs font-bold text-emerald-950">Toque por NFC (Aproximação)</h4>
+        <p class="text-[11px] text-emerald-900/80">Encostem as costas dos celulares com NFC ativado.</p>
+        <button onclick="triggerWebNfcSync()" class="sketch-btn w-full bg-emerald-200 hover:bg-emerald-300 text-xs py-1.5 rounded-xl font-bold">
+          Iniciar Leitura NFC 📡
+        </button>
+      </div>
+
+      <div class="bg-amber-50 border-2 border-amber-600 rounded-2xl p-3 space-y-2.5">
+        <div class="flex items-center justify-between text-left">
+          <div>
+            <h4 class="text-xs font-bold text-amber-950">Seu Código de Hoje</h4>
+            <p class="text-[10px] text-pencil/70">Envie este número para o seu amor:</p>
+          </div>
+          <button onclick="copyMyDailyCode()" class="text-[10px] bg-amber-200 hover:bg-amber-300 px-2 py-0.5 rounded border border-amber-400 font-bold">
+            Copiar 📋
+          </button>
+        </div>
+
+        <div class="bg-white border border-dashed border-amber-700 py-2 px-3 rounded-xl font-mono text-xl font-black text-amber-950 tracking-widest shadow-inner" id="daily-generated-code-box">
+          ------
+        </div>
+
+        <div class="pt-1 border-t border-amber-200">
+          <label class="block text-[11px] font-bold text-amber-950 text-left mb-1">
+            Digite os 6 dígitos que o amor te enviou:
+          </label>
+          <div class="flex gap-1.5">
+            <input type="tel" maxlength="6" id="partner-sync-input" placeholder="Ex: 849201" 
+                   class="w-full text-center font-mono text-base font-bold tracking-widest p-1.5 rounded-lg border-2 border-pencil bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <button onclick="submitPartnerDailyCode()" class="sketch-btn bg-amber-300 hover:bg-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap text-amber-950">
+              Validar 🐾
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRAL DE JOGOS -->
+  <div id="games-hub-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-paper-card max-w-md w-full p-4 sm:p-5 rounded-3xl sketch-border space-y-3 relative max-h-[92vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🎮</span>
+          <div>
+            <h3 class="font-caveat text-2xl font-bold text-pencil">Central de Jogos dos Gatinhos</h3>
+            <p class="text-[11px] text-pencil/70">Ganhem 🐾 Patinhas salvas diretamente na sua conta!</p>
+          </div>
+        </div>
+        <button onclick="closeGamesHubModal()" class="text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <div class="flex gap-2 text-xs font-bold border-b border-pencil/20 pb-1">
+        <button onclick="switchGamesTab('online')" id="btn-tab-online" class="px-3 py-1 rounded-xl bg-amber-200 border border-pencil">Multiplayer Online</button>
+        <button onclick="switchGamesTab('solo')" id="btn-tab-solo" class="px-3 py-1 rounded-xl bg-white border border-pencil">Singleplayer & Co-op</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto space-y-2.5 p-1" id="games-list-container"></div>
+    </div>
+  </div>
+
+  <!-- MODAL AIR HOCKEY FELINO (ONLINE & VS BOT) -->
+  <div id="airhockey-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#f0f9ff] max-w-sm w-full p-4 rounded-3xl sketch-border space-y-3 text-center relative max-h-[95vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-1">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🏒</span>
+          <div class="text-left">
+            <h3 class="font-caveat text-2xl font-bold text-pencil">Air Hockey Felino</h3>
+            <p id="airhockey-mode-desc" class="text-[10px] text-pencil/70">Disputa rápida no gelo!</p>
+          </div>
+        </div>
+        <button onclick="closeAirHockeyModal()" class="text-xl font-bold p-1">&times;</button>
+      </div>
+
+      <!-- Placar da partida -->
+      <div class="flex justify-around items-center bg-white px-3 py-1.5 rounded-2xl border-2 border-pencil text-xs font-bold shadow-sm">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+          <span id="airhockey-p1-name">Você</span>: 
+          <span id="airhockey-score-p1" class="text-base text-amber-600 font-black">0</span>
+        </div>
+        <span class="text-pencil/40 font-mono text-sm">VS</span>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+          <span id="airhockey-p2-name">Amor</span>: 
+          <span id="airhockey-score-p2" class="text-base text-rose-600 font-black">0</span>
+        </div>
+      </div>
+
+      <!-- Container da Mesa / Canvas -->
+      <div id="airhockey-canvas-container" class="w-full h-80 rounded-2xl border-2 border-pencil relative overflow-hidden select-none touch-none bg-blue-50">
+        <canvas id="airhockey-canvas" class="w-full h-full block cursor-pointer"></canvas>
+        
+        <!-- Overlay Inicial / Fim de Jogo -->
+        <div id="airhockey-overlay" class="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-white text-center">
+          <span class="text-4xl mb-1 animate-bounce">🏒🐾</span>
+          <h4 id="airhockey-overlay-title" class="font-caveat text-2xl font-bold">Pronto pro Jogo?</h4>
+          <p id="airhockey-overlay-msg" class="text-xs text-stone-200 mt-1 max-w-[210px]">Arraste seu batedor no campo de baixo e marque 5 gols para faturar patinhas!</p>
+          <button onclick="startAirHockeyGame(airHockeyMode)" class="mt-3 sketch-btn bg-amber-400 hover:bg-amber-500 text-pencil font-bold text-xs px-4 py-2 rounded-xl shadow">
+            Iniciar Partida ⚡
+          </button>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center text-[11px] text-pencil/70 px-1">
+        <span id="airhockey-hint-txt">Toque e arraste para rebater!</span>
+        <button onclick="startAirHockeyGame(airHockeyMode)" class="sketch-btn bg-stone-100 hover:bg-stone-200 px-2 py-0.5 rounded-lg font-bold text-[10px]">
+          Reiniciar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOGO DA VELHA ONLINE -->
+  <div id="tictactoe-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fffdf9] max-w-sm w-full p-4 rounded-3xl sketch-border space-y-3 text-center">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-1">
+        <h3 class="font-caveat text-2xl font-bold text-pencil">Jogo da Velha Felino 🐾</h3>
+        <button onclick="closeTicTacToeModal()" class="text-xl font-bold">&times;</button>
+      </div>
+      
+      <div class="flex justify-between items-center text-xs font-bold px-2">
+        <span>Você: <b class="text-amber-700" id="ttt-my-symbol">🐾 (Gatinho 1)</b></span>
+        <span id="ttt-turn-indicator" class="bg-amber-100 px-2 py-0.5 rounded-full border border-pencil">Vez do Gatinho 1</span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 bg-[#ecd8be] p-2.5 rounded-2xl border-2 border-pencil max-w-[260px] mx-auto" id="ttt-board-grid"></div>
+
+      <div class="text-xs text-pencil/70 flex justify-between items-center px-1">
+        <button onclick="resetTicTacToeGame()" class="sketch-btn bg-stone-100 px-2.5 py-1 rounded-lg font-bold text-[11px]">Reiniciar Partida</button>
+        <span id="ttt-status-msg">Jogue na sua vez!</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PATA RÁPIDA (REACTION ONLINE) -->
+  <div id="reaction-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#fffdf9] max-w-sm w-full p-4 rounded-3xl sketch-border space-y-3 text-center">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-1">
+        <h3 class="font-caveat text-2xl font-bold text-pencil">Pata Rápida! ⚡</h3>
+        <button onclick="closeReactionModal()" class="text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-pencil/70">Aguardem a tigela acender e toquem o mais rápido possível!</p>
+
+      <div id="reaction-arena" class="w-full h-44 rounded-2xl border-2 border-pencil flex flex-col items-center justify-center bg-stone-100 cursor-pointer select-none transition-colors duration-200" onclick="handleReactionTap()">
+        <span class="text-5xl" id="reaction-bowl-icon">🥣</span>
+        <span class="text-xs font-bold mt-2" id="reaction-prompt-text">Aguarde o sinal...</span>
+      </div>
+
+      <button onclick="startReactionRound()" class="sketch-btn w-full bg-amber-200 hover:bg-amber-300 py-1.5 rounded-xl font-bold text-xs">
+        Iniciar Rodada ⚡
+      </button>
+    </div>
+  </div>
+
+  <!-- PULA-PULA NAS NUVENS (SKY HOP) -->
+  <div id="skyhop-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#e9f4fb] max-w-sm w-full p-4 rounded-3xl sketch-border space-y-3 text-center">
+      <div class="flex justify-between items-center border-b border-pencil/20 pb-1">
+        <h3 class="font-caveat text-2xl font-bold text-pencil">Pula-Pula nas Nuvens ☁️</h3>
+        <button onclick="closeSkyHopModal()" class="text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-pencil/70">Pule nas nuvens fofas e fature patinhas salvas no servidor!</p>
+
+      <div id="skyhop-canvas-container" class="w-full h-64 bg-gradient-to-b from-[#87ceeb] to-[#e0f4ff] rounded-2xl border-2 border-pencil relative overflow-hidden select-none cursor-pointer">
+        <canvas id="skyhop-canvas" class="w-full h-full block"></canvas>
+      </div>
+
+      <div class="flex justify-between items-center text-xs font-bold px-2">
+        <span>Pontos: <span id="skyhop-score">0</span></span>
+        <button onclick="startSkyHopGame()" class="sketch-btn bg-emerald-200 hover:bg-emerald-300 px-3 py-1.5 rounded-xl">
+          Começar a Pular 🐾
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HISTÓRICO DE CARTINHAS / APP DE MENSAGENS COMPLETO -->
+  <div id="letter-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+    <div class="bg-[#faf5eb] max-w-lg w-full rounded-3xl sketch-border flex flex-col h-[85vh] max-h-[620px] shadow-2xl overflow-hidden relative">
+      
+      <!-- Topo do App de Mensagens -->
+      <div class="bg-[#fff9ef] border-b-2 border-pencil p-3.5 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-full bg-rose-100 border-2 border-pencil flex items-center justify-center text-xl shadow-sm">
+            💌
+          </div>
+          <div>
+            <h3 class="font-caveat text-2xl font-bold text-rose-900 leading-tight">Correio do Amor Felino</h3>
+            <p class="text-[11px] text-pencil/70 flex items-center gap-1 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping inline-block"></span>
+              Sincronizado na nuvem em tempo real
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <!-- Botão para mudar para visualização vendo os gatinhos -->
+          <button onclick="switchToFloatingChat()" title="Escrever e ver os gatinhos na tela" 
+                  class="sketch-btn bg-amber-100 hover:bg-amber-200 text-xs px-2.5 py-1 rounded-xl font-bold flex items-center gap-1 text-amber-950">
+            <span>👁️</span>
+            <span class="hidden sm:inline">Ver Gatinhos</span>
+          </button>
+          <button onclick="clearLetterHistoryConfirm()" title="Limpar conversa" class="text-xs text-pencil/40 hover:text-rose-600 p-1.5 font-bold">
+            🗑️
+          </button>
+          <button onclick="closeLetterModal()" class="w-8 h-8 rounded-full border-2 border-pencil flex items-center justify-center text-base font-bold bg-white hover:bg-rose-50 active:scale-95 transition-transform">
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- Feed / Histórico de Mensagens estilo Chat -->
+      <div id="chat-messages-container" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 chat-scroll bg-gradient-to-b from-[#fdfbf7] to-[#f4ebe1]">
+        <!-- Preenchido dinamicamente por renderLetterHistory() -->
+      </div>
+
+      <!-- Barra de Envio estilo Mensageiro -->
+      <div class="bg-[#fff9ef] border-t-2 border-pencil p-2.5 sm:p-3 flex-shrink-0 flex flex-col gap-1.5">
+        <!-- Reações rápidas -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          <span class="text-[10px] text-pencil/60 font-bold mr-1">Rápido:</span>
+          <button onclick="insertQuickMessage('Te amo muito meu amorzinho! 💖')" class="bg-white hover:bg-rose-100 border border-pencil/40 px-2 py-0.5 rounded-full whitespace-nowrap text-[11px]">
+            💖 Te amo
+          </button>
+          <button onclick="insertQuickMessage('Saudades de você! Vem cá me dar um beijinho 🐾')" class="bg-white hover:bg-amber-100 border border-pencil/40 px-2 py-0.5 rounded-full whitespace-nowrap text-[11px]">
+            🐾 Saudades
+          </button>
+          <button onclick="insertQuickMessage('Você é o amor da minha vida todinha! ✨')" class="bg-white hover:bg-purple-100 border border-pencil/40 px-2 py-0.5 rounded-full whitespace-nowrap text-[11px]">
+            ✨ Amor da vida
+          </button>
+          <button onclick="insertQuickMessage('Miau! Já comeu hoje? Bebeu água? 🐟')" class="bg-white hover:bg-blue-100 border border-pencil/40 px-2 py-0.5 rounded-full whitespace-nowrap text-[11px]">
+            🐟 Miau
+          </button>
+        </div>
+
+        <!-- Linha do input + botão -->
+        <div class="flex items-center gap-2">
+          <input type="text" id="chat-input-text" maxlength="160" placeholder="Escreva uma cartinha fofa pro seu amor..."
+                 class="flex-1 bg-white border-2 border-pencil rounded-2xl px-3.5 py-2 text-xs sm:text-sm font-hand text-base text-pencil focus:outline-none focus:ring-2 focus:ring-rose-400 placeholder:text-pencil/40">
+          <button onclick="sendLoveLetter()" id="chat-send-btn" 
+                  class="sketch-btn bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl flex items-center gap-1 shadow whitespace-nowrap">
+            <span>Enviar</span>
+            <span>🐾</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= LOGICA DO JOGO ================= -->
+
+  <script>
+    /* 1. GERADOR SVG DOS GATOS */
+    function generateCatSvg(options) {
+      const {
+        breed = 'white',
+        accessory = 'none',
+        accessoryColor = '#e76f51',
+        expression = 'happy',
+        eyeShape = 'almond',
+        eyeColor = '#2b2725',
+        pupil = 'round',
+        pupilColor = '#ffffff',
+        mouth = 'cat',
+        isFlipped = false
+      } = options;
+      
+      let bodyFill = '#fffdf9';
+      let strokeCol = '#2b2725';
+      let earInner = '#f7c2c2';
+
+      if (breed === 'orange') {
+        bodyFill = '#f4a261';
+        earInner = '#e76f51';
+      } else if (breed === 'tuxedo') {
+        bodyFill = '#3d3a37';
+      } else if (breed === 'siamese') {
+        bodyFill = '#ebdcc9';
+        earInner = '#5d4037';
+      }
+
+      let extraMarkings = '';
+      if (breed === 'tuxedo') {
+        extraMarkings = `
+          <polygon points="98,90 80,120 116,120" fill="#fffdf9" />
+          <ellipse cx="98" cy="148" rx="20" ry="14" fill="#fffdf9" />
+        `;
+      } else if (breed === 'orange') {
+        extraMarkings = `
+          <path d="M 98,62 L 98,72 M 88,58 Q 92,68 86,75 M 108,58 Q 104,68 110,75" stroke="#b3581d" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <ellipse cx="98" cy="144" rx="14" ry="10" fill="#fffdf9" />
+        `;
+      } else if (breed === 'siamese') {
+        extraMarkings = `
+          <polygon points="40,30 65,70 30,70" fill="#3d281d" opacity="0.8"/>
+          <polygon points="156,30 131,70 166,70" fill="#3d281d" opacity="0.8"/>
+          <path d="M 64,112 Q 98,78 132,112 Q 98,140 64,112 Z" fill="#3d281d" opacity="0.85"/>
+        `;
+      }
+
+      let accessorySvg = '';
+      if (accessory === 'bowtie') {
+        accessorySvg = `
+          <g transform="translate(0, 10)">
+            <polygon points="85,122 85,136 98,129" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/>
+            <polygon points="111,122 111,136 98,129" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/>
+            <circle cx="98" cy="129" r="4" fill="#f4a261" stroke="${strokeCol}" stroke-width="1.5"/>
+          </g>
+        `;
+      } else if (accessory === 'glasses') {
+        accessorySvg = `
+          <g>
+            <circle cx="72" cy="98" r="18" fill="none" stroke="${accessoryColor}" stroke-width="3"/>
+            <circle cx="124" cy="98" r="18" fill="none" stroke="${accessoryColor}" stroke-width="3"/>
+            <path d="M 90,98 Q 98,92 106,98" fill="none" stroke="${accessoryColor}" stroke-width="3"/>
+          </g>
+        `;
+      } else if (accessory === 'flower') {
+        accessorySvg = `
+          <g transform="translate(10, -5)">
+            <circle cx="58" cy="50" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/>
+            <circle cx="66" cy="46" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/>
+            <circle cx="72" cy="54" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/>
+            <circle cx="66" cy="60" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/>
+            <circle cx="58" cy="58" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/>
+            <circle cx="64" cy="54" r="3.5" fill="#f4a261"/>
+          </g>
+        `;
+      } else if (accessory === 'crown') {
+        accessorySvg = `
+          <g transform="translate(0, -6)">
+            <path d="M 80,48 L 86,60 L 98,42 L 110,60 L 116,48 L 114,64 L 82,64 Z" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2.5" stroke-linejoin="round"/>
+            <circle cx="98" cy="42" r="3" fill="#e76f51"/>
+          </g>
+        `;
+      } else if (accessory === 'half_heart_left') {
+        accessorySvg = `
+          <g transform="translate(0, 10)">
+            <path d="M 98,124 C 98,118 86,114 86,124 C 86,132 98,138 98,140 Z" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/>
+            <line x1="72" y1="126" x2="86" y2="124" stroke="${strokeCol}" stroke-width="2" stroke-dasharray="2,2"/>
+          </g>
+        `;
+      } else if (accessory === 'half_heart_right') {
+        accessorySvg = `
+          <g transform="translate(0, 10)">
+            <path d="M 98,124 C 98,118 110,114 110,124 C 110,132 98,138 98,140 Z" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/>
+            <line x1="124" y1="126" x2="110" y2="124" stroke="${strokeCol}" stroke-width="2" stroke-dasharray="2,2"/>
+          </g>
+        `;
+      } else if (accessory === 'ribbon_pair') {
+        accessorySvg = `
+          <g transform="translate(0, 12)">
+            <circle cx="98" cy="132" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.8"/>
+            <path d="M 94,136 L 86,146 M 102,136 L 110,146" stroke="${accessoryColor}" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        `;
+      }
+
+      let eyeBaseShape = '';
+      if (eyeShape === 'round') {
+        eyeBaseShape = `
+          <circle cx="72" cy="98" r="17" fill="${eyeColor}" />
+          <circle cx="124" cy="98" r="17" fill="${eyeColor}" />
+        `;
+      } else if (eyeShape === 'anime') {
+        eyeBaseShape = `
+          <path d="M 56,92 Q 72,82 88,96 Q 72,114 56,92 Z" fill="${eyeColor}" stroke="${strokeCol}" stroke-width="1.5" />
+          <path d="M 140,92 Q 124,82 108,96 Q 124,114 140,92 Z" fill="${eyeColor}" stroke="${strokeCol}" stroke-width="1.5" />
+        `;
+      } else {
+        eyeBaseShape = `
+          <ellipse cx="72" cy="98" rx="14" ry="18" fill="${eyeColor}" />
+          <ellipse cx="124" cy="98" rx="14" ry="18" fill="${eyeColor}" />
+        `;
+      }
+
+      let pupilDetail = '';
+      if (pupil === 'slit') {
+        pupilDetail = `
+          <ellipse cx="72" cy="98" rx="3.5" ry="16" fill="${pupilColor}" />
+          <ellipse cx="124" cy="98" rx="3.5" ry="16" fill="${pupilColor}" />
+        `;
+      } else if (pupil === 'sparkle') {
+        pupilDetail = `
+          <polygon points="72,90 74,94 78,95 74,97 72,101 70,97 66,95 70,94" fill="${pupilColor}"/>
+          <polygon points="124,90 126,94 130,95 126,97 124,101 122,97 118,95 122,94" fill="${pupilColor}"/>
+        `;
+      } else if (pupil === 'heart') {
+        pupilDetail = `
+          <path d="M 72,96 C 72,92 68,90 66,94 C 64,98 72,102 72,104 C 72,102 80,98 78,94 C 76,90 72,92 72,96 Z" fill="${pupilColor}" />
+          <path d="M 124,96 C 124,92 120,90 118,94 C 116,98 124,102 124,104 C 124,102 132,98 130,94 C 128,90 124,92 124,96 Z" fill="${pupilColor}" />
+        `;
+      } else {
+        pupilDetail = `
+          <circle cx="76" cy="94" r="5" fill="${pupilColor}" />
+          <circle cx="128" cy="94" r="5" fill="${pupilColor}" />
+          <circle cx="70" cy="103" r="2.2" fill="${pupilColor}" opacity="0.8"/>
+          <circle cx="122" cy="103" r="2.2" fill="${pupilColor}" opacity="0.8"/>
+        `;
+      }
+
+      let eyesSvg = `${eyeBaseShape}${pupilDetail}`;
+
+      if (expression === 'pet') {
+        eyesSvg = `
+          <path d="M 60,100 Q 72,86 84,100" fill="none" stroke="${strokeCol}" stroke-width="4.5" stroke-linecap="round" />
+          <path d="M 112,100 Q 124,86 136,100" fill="none" stroke="${strokeCol}" stroke-width="4.5" stroke-linecap="round" />
+          <ellipse cx="58" cy="110" rx="6" ry="3.5" fill="#e89c9c" opacity="0.8" />
+          <ellipse cx="138" cy="110" rx="6" ry="3.5" fill="#e89c9c" opacity="0.8" />
+        `;
+      }
+
+      let mouthSvg = `<path d="M 94,118 Q 98,122 102,118" fill="none" stroke="${strokeCol}" stroke-width="2.5" stroke-linecap="round" />`;
+      if (mouth === 'tongue') {
+        mouthSvg = `
+          <path d="M 94,118 Q 98,122 102,118" fill="none" stroke="${strokeCol}" stroke-width="2.5"/>
+          <path d="M 96,120 C 96,125 100,125 100,120 Z" fill="#e74c3c" stroke="${strokeCol}" stroke-width="1.5"/>
+        `;
+      } else if (mouth === 'vampire') {
+        mouthSvg = `
+          <path d="M 93,118 Q 98,122 103,118" fill="none" stroke="${strokeCol}" stroke-width="2.5"/>
+          <polygon points="95,118 96,122 97,118" fill="#fff" stroke="${strokeCol}" stroke-width="1"/>
+          <polygon points="99,118 100,122 101,118" fill="#fff" stroke="${strokeCol}" stroke-width="1"/>
+        `;
+      } else if (mouth === 'smile') {
+        mouthSvg = `<path d="M 92,116 Q 98,124 104,116" fill="none" stroke="${strokeCol}" stroke-width="2.8" stroke-linecap="round"/>`;
+      }
+
+      const flipTransform = isFlipped ? 'transform="scale(-1, 1) translate(-200, 0)"' : '';
+
+      return `
+        <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-md select-none transition-transform duration-200">
+          <g ${flipTransform}>
+            <g class="anim-tail">
+              <path d="M 134,152 C 162,150 180,134 172,118 C 165,106 152,114 148,126 C 144,136 134,146 130,154 Z" 
+                    fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round" />
+            </g>
+
+            <g class="anim-body">
+              <path d="M 64,136 C 56,152 56,168 68,172 C 78,175 84,164 88,152 C 94,152 104,152 110,152 C 114,164 120,175 130,172 C 142,168 140,152 134,136 Z" 
+                    fill="${bodyFill}" stroke="${strokeCol}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+              
+              <path d="M 44,82 C 40,54 44,38 52,42 C 64,48 82,70 98,70 C 114,70 132,48 144,42 C 152,38 156,54 152,82 C 160,112 142,138 98,138 C 54,138 36,112 44,82 Z" 
+                    fill="${bodyFill}" stroke="${strokeCol}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+              
+              <polygon points="52,46 64,54 52,68" fill="${earInner}" opacity="0.65" />
+              <polygon points="144,46 132,54 144,68" fill="${earInner}" opacity="0.65" />
+
+              ${extraMarkings}
+
+              <g class="anim-blink">
+                ${eyesSvg}
+              </g>
+
+              <polygon points="95,112 101,112 98,116" fill="#e76f51" />
+              ${mouthSvg}
+              
+              <line x1="42" y1="108" x2="22" y2="105" stroke="${strokeCol}" stroke-width="2" stroke-linecap="round" />
+              <line x1="42" y1="114" x2="20" y2="116" stroke="${strokeCol}" stroke-width="2" stroke-linecap="round" />
+              <line x1="154" y1="108" x2="174" y2="105" stroke="${strokeCol}" stroke-width="2" stroke-linecap="round" />
+              <line x1="154" y1="114" x2="176" y2="116" stroke="${strokeCol}" stroke-width="2" stroke-linecap="round" />
+
+              <ellipse cx="82" cy="165" rx="8" ry="6" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3" />
+              <ellipse cx="114" cy="165" rx="8" ry="6" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3" />
+
+              ${accessorySvg}
+            </g>
+          </g>
+        </svg>
+      `;
+    }
+  </script>
+
+  <script type="module">
+    /* 2. PERSISTÊNCIA HÍBRIDA (CACHE LOCAL + FIRESTORE EM TEMPO REAL) */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA-ysoy5seTdGRJzdymIvreyzOqUm7LrN0",
+      authDomain: "jardim-dos-gatos.firebaseapp.com",
+      projectId: "jardim-dos-gatos",
+      storageBucket: "jardim-dos-gatos.firebasestorage.app",
+      messagingSenderId: "85451045348",
+      appId: "1:85451045348:web:b824f6dc363c860ca0eff1",
+      measurementId: "G-35Y93EN25H"
+    };
+
+    const appId = "jardim-dos-gatos-casal";
+    const fixedRoomId = "ninho_de_amor_fixo";
+
+    let savedRole = localStorage.getItem('casal_meu_gatinho') || 'cat1';
+
+    const defaultState = {
+      roomId: fixedRoomId,
+      myRole: savedRole,
+      roomPassword: '', // Vazio inicialmente para que o casal crie na primeira vez
+      loveScore: 85,
+      nicknames: {
+        cat1: 'Gatinho 1',
+        cat2: 'Gatinha 2'
+      },
+      streak: {
+        current: 1,
+        best: 1,
+        totalDays: 1,
+        lastDailyDate: new Date().toDateString()
+      },
+      scores: {
+        cat1Wins: 0,
+        cat2Wins: 0,
+        ties: 0
+      },
+      presence: {
+        dailyKey: 'AMOR-CAT-2026',
+        syncedToday: false,
+        lastSyncedDate: ''
+      },
+      tictactoe: {
+        board: Array(9).fill(''),
+        turn: 'cat1',
+        winner: ''
+      },
+      reaction: {
+        state: 'waiting',
+        winner: ''
+      },
+      wallets: {
+        cat1: { fish: 0, paws: 0, coupleCoins: 0 },
+        cat2: { fish: 0, paws: 0, coupleCoins: 0 }
+      },
+      inventories: {
+        cat1: { food_bread: 2, food_milk: 1 },
+        cat2: { food_bread: 2, food_milk: 1 }
+      },
+      unlockedItems: {
+        cat1: ["acc_none", "breed_white", "mouth_cat", "pupil_round", "shape_almond"],
+        cat2: ["acc_none", "breed_orange", "mouth_cat", "pupil_round", "shape_almond"]
+      },
+      lastRewardDates: {
+        cat1: '',
+        cat2: ''
+      },
+      cat1: {
+        breed: 'white',
+        accessory: 'bowtie',
+        accessoryColor: '#e76f51',
+        expression: 'happy',
+        eyeShape: 'almond',
+        eyeColor: '#2b2725',
+        pupil: 'round',
+        pupilColor: '#ffffff',
+        mouth: 'cat',
+        hunger: 80,
+        energy: 85,
+        happiness: 90,
+        speech: 'Ronronando baixinho... 🐾'
+      },
+      cat2: {
+        breed: 'orange',
+        accessory: 'flower',
+        accessoryColor: '#f4a261',
+        expression: 'happy',
+        eyeShape: 'almond',
+        eyeColor: '#2b2725',
+        pupil: 'round',
+        pupilColor: '#ffffff',
+        mouth: 'cat',
+        hunger: 75,
+        energy: 80,
+        happiness: 90,
+        speech: 'Esperando você chegar... 💖'
+      },
+      letters: []
+    };
+
+    function loadLocalStateCache() {
+      try {
+        const cachedRaw = localStorage.getItem('casal_shared_state_cache');
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          return {
+            ...defaultState,
+            ...cached,
+            myRole: savedRole,
+            roomPassword: cached.roomPassword || '',
+            wallets: { ...defaultState.wallets, ...(cached.wallets || {}) },
+            inventories: { ...defaultState.inventories, ...(cached.inventories || {}) },
+            unlockedItems: { ...defaultState.unlockedItems, ...(cached.unlockedItems || {}) },
+            cat1: { ...defaultState.cat1, ...(cached.cat1 || {}) },
+            cat2: { ...defaultState.cat2, ...(cached.cat2 || {}) },
+            letters: Array.isArray(cached.letters) ? cached.letters : []
+          };
+        }
+      } catch (e) {
+        console.warn("Aviso ao ler cache local:", e);
+      }
+      return { ...defaultState };
+    }
+
+    window.sharedState = loadLocalStateCache();
+    window.hasLoadedFromCloud = false;
+
+    window.saveStateToLocalCache = function() {
+      try {
+        localStorage.setItem('casal_shared_state_cache', JSON.stringify({
+          roomPassword: window.sharedState.roomPassword || '',
+          wallets: window.sharedState.wallets,
+          inventories: window.sharedState.inventories,
+          unlockedItems: window.sharedState.unlockedItems,
+          cat1: window.sharedState.cat1,
+          cat2: window.sharedState.cat2,
+          loveScore: window.sharedState.loveScore,
+          nicknames: window.sharedState.nicknames,
+          streak: window.sharedState.streak,
+          scores: window.sharedState.scores,
+          presence: window.sharedState.presence,
+          lastRewardDates: window.sharedState.lastRewardDates,
+          letters: window.sharedState.letters || []
+        }));
+      } catch(e) {}
+    };
+
+    window.getMyWallet = function() {
+      const role = window.sharedState.myRole || 'cat1';
+      if (!window.sharedState.wallets) window.sharedState.wallets = {};
+      if (!window.sharedState.wallets[role]) window.sharedState.wallets[role] = { fish: 0, paws: 0, coupleCoins: 0 };
+      return window.sharedState.wallets[role];
+    };
+
+    window.getMyInventory = function() {
+      const role = window.sharedState.myRole || 'cat1';
+      if (!window.sharedState.inventories) window.sharedState.inventories = {};
+      if (!window.sharedState.inventories[role]) window.sharedState.inventories[role] = { food_bread: 2, food_milk: 1 };
+      return window.sharedState.inventories[role];
+    };
+
+    window.getMyUnlockedItems = function() {
+      const role = window.sharedState.myRole || 'cat1';
+      if (!window.sharedState.unlockedItems) window.sharedState.unlockedItems = {};
+      if (!window.sharedState.unlockedItems[role]) {
+        window.sharedState.unlockedItems[role] = ["acc_none", "breed_white", "mouth_cat", "pupil_round", "shape_almond"];
+      }
+      return window.sharedState.unlockedItems[role];
+    };
+
+    let db = null;
+
+    async function initFirebaseSync() {
+      const statusText = document.getElementById('cloud-sync-status-text');
+      const statusDot = document.getElementById('cloud-sync-status-dot');
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+
+        try {
+          const auth = getAuth(app);
+          await signInAnonymously(auth);
+        } catch(e) {
+          console.warn("Auth opcional anônimo:", e.message);
+        }
+
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', fixedRoomId);
+
+        onSnapshot(roomRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            
+            window.sharedState = {
+              ...window.sharedState,
+              ...data,
+              myRole: window.sharedState.myRole,
+              roomPassword: data.roomPassword !== undefined ? data.roomPassword : window.sharedState.roomPassword,
+              wallets: {
+                cat1: { ...window.sharedState.wallets.cat1, ...(data.wallets?.cat1 || {}) },
+                cat2: { ...window.sharedState.wallets.cat2, ...(data.wallets?.cat2 || {}) }
+              },
+              inventories: {
+                cat1: { ...window.sharedState.inventories.cat1, ...(data.inventories?.cat1 || {}) },
+                cat2: { ...window.sharedState.inventories.cat2, ...(data.inventories?.cat2 || {}) }
+              },
+              unlockedItems: {
+                cat1: data.unlockedItems?.cat1 || window.sharedState.unlockedItems.cat1 || ["acc_none", "breed_white", "mouth_cat", "pupil_round", "shape_almond"],
+                cat2: data.unlockedItems?.cat2 || window.sharedState.unlockedItems.cat2 || ["acc_none", "breed_orange", "mouth_cat", "pupil_round", "shape_almond"]
+              },
+              cat1: {
+                ...window.sharedState.cat1,
+                ...(data.cat1 || {})
+              },
+              cat2: {
+                ...window.sharedState.cat2,
+                ...(data.cat2 || {})
+              },
+              letters: Array.isArray(data.letters) ? data.letters : (window.sharedState.letters || [])
+            };
+
+            window.hasLoadedFromCloud = true;
+            window.saveStateToLocalCache();
+
+            if (statusText) statusText.innerText = "Nuvem sincronizada ☁️";
+            if (statusDot) {
+              statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+            }
+
+            window.renderFullState();
+            window.renderTicTacToeBoard();
+            window.renderBackpackSlots();
+            window.updateWalletHeader();
+            window.renderLetterHistory();
+            window.updateFloatingPreviewText();
+
+            // Atualiza o estado da janela de login se estiver aberta
+            const loginModal = document.getElementById('login-modal');
+            if (loginModal && !loginModal.classList.contains('hidden')) {
+              window.refreshLoginModalUI();
+            }
+          } else {
+            window.hasLoadedFromCloud = true;
+            window.saveStateToCloud();
+          }
+        }, (err) => {
+          console.warn("Firestore snapshot error (usando cache local):", err);
+          if (statusText) statusText.innerText = "Modo Local Seguro 🛡️";
+          if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-amber-500 inline-block";
+          
+          const banner = document.getElementById('permission-warning-banner');
+          if (banner) banner.classList.remove('hidden');
+        });
+
+      } catch(err) {
+        console.error("Falha ao inicializar o Firebase:", err);
+        if (statusText) statusText.innerText = "Modo Local Seguro 🛡️";
+      }
+    }
+
+    window.saveStateToCloud = async function() {
+      window.renderFullState();
+      window.updateWalletHeader();
+      window.saveStateToLocalCache();
+
+      if (!window.hasLoadedFromCloud) {
+        return;
+      }
+
+      if (db) {
+        try {
+          const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', fixedRoomId);
+          await setDoc(roomRef, {
+            roomPassword: window.sharedState.roomPassword || '',
+            cat1: window.sharedState.cat1,
+            cat2: window.sharedState.cat2,
+            loveScore: window.sharedState.loveScore,
+            nicknames: window.sharedState.nicknames,
+            streak: window.sharedState.streak,
+            scores: window.sharedState.scores,
+            presence: window.sharedState.presence,
+            tictactoe: window.sharedState.tictactoe,
+            reaction: window.sharedState.reaction,
+            wallets: window.sharedState.wallets,
+            inventories: window.sharedState.inventories,
+            unlockedItems: window.sharedState.unlockedItems,
+            lastRewardDates: window.sharedState.lastRewardDates || {},
+            letters: window.sharedState.letters || [],
+            updatedAt: Date.now()
+          }, { merge: true });
+        } catch(e) {
+          console.warn("Erro ao salvar no Firestore (preservado no cache):", e.message);
+        }
+      }
+    };
+
+    window.toggleMyIdentity = function() {
+      openLoginModal();
+    };
+
+    window.refreshLoginModalUI = function() {
+      const banner = document.getElementById('first-time-pwd-banner');
+      const confirmBox = document.getElementById('login-password-confirm-box');
+      const title = document.getElementById('login-modal-title');
+      const icon = document.getElementById('login-modal-icon');
+      const desc = document.getElementById('login-modal-desc');
+      const label = document.getElementById('login-password-label');
+      const hint = document.getElementById('login-password-hint');
+      const submitBtn = document.getElementById('login-submit-btn');
+
+      const isPasswordSet = !!(window.sharedState && window.sharedState.roomPassword && window.sharedState.roomPassword.trim() !== '');
+
+      if (!isPasswordSet) {
+        // Modo: Criação da Primeira Senha do Casal
+        if (banner) banner.classList.remove('hidden');
+        if (confirmBox) confirmBox.classList.remove('hidden');
+        if (title) title.innerText = "Criar Cantinho do Casal ✨";
+        if (icon) icon.innerText = "💖🐾";
+        if (desc) desc.innerText = "Defina a senha secreta que vocês dois usarão juntos!";
+        if (label) label.innerText = "🔑 Crie a Senha Secreta do Casal:";
+        if (hint) hint.innerText = "(Você escolhe agora)";
+        if (submitBtn) submitBtn.innerText = "Salvar Senha e Entrar 🐾";
+      } else {
+        // Modo: Login com a Senha Existente
+        if (banner) banner.classList.add('hidden');
+        if (confirmBox) confirmBox.classList.add('hidden');
+        if (title) title.innerText = "Cantinho Privado do Casal";
+        if (icon) icon.innerText = "🔐🐾";
+        if (desc) desc.innerText = "Acesso protegido para ninguém mexer no jardim de vocês!";
+        if (label) label.innerText = "🔑 Senha Secreta do Casal:";
+        if (hint) hint.innerText = "(A mesma que criaram)";
+        if (submitBtn) submitBtn.innerText = "Entrar no Jardim Protegido 🐾";
+      }
+    };
+
+    window.openLoginModal = function() {
+      const modal = document.getElementById('login-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        const nickInput = document.getElementById('login-nickname-input');
+        const passInput = document.getElementById('login-password-input');
+        const confInput = document.getElementById('login-password-confirm-input');
+        const errEl = document.getElementById('login-error-msg');
+        if (errEl) errEl.classList.add('hidden');
+        if (passInput) passInput.value = '';
+        if (confInput) confInput.value = '';
+
+        const currentRole = window.sharedState.myRole || 'cat1';
+        if (nickInput) {
+          nickInput.value = (window.sharedState.nicknames && window.sharedState.nicknames[currentRole]) || '';
+        }
+        chooseProfileTarget(currentRole);
+        window.refreshLoginModalUI();
+      }
+    };
+
+    let selectedLoginTarget = 'cat1';
+
+    window.chooseProfileTarget = function(role) {
+      selectedLoginTarget = role;
+      const b1 = document.getElementById('login-card-cat1');
+      const b2 = document.getElementById('login-card-cat2');
+      if (b1) {
+        b1.className = (role === 'cat1') 
+          ? 'p-3.5 rounded-2xl border-4 border-amber-500 bg-amber-50 flex flex-col items-center gap-2 shadow-md ring-2 ring-amber-300' 
+          : 'p-3.5 rounded-2xl border-2 border-pencil bg-white opacity-70 hover:opacity-100 flex flex-col items-center gap-2';
+      }
+      if (b2) {
+        b2.className = (role === 'cat2') 
+          ? 'p-3.5 rounded-2xl border-4 border-rose-500 bg-rose-50 flex flex-col items-center gap-2 shadow-md ring-2 ring-rose-300' 
+          : 'p-3.5 rounded-2xl border-2 border-pencil bg-white opacity-70 hover:opacity-100 flex flex-col items-center gap-2';
+      }
+      const nickInput = document.getElementById('login-nickname-input');
+      if (nickInput && !nickInput.value) {
+        nickInput.value = (window.sharedState.nicknames && window.sharedState.nicknames[role]) || (role === 'cat1' ? 'Gatinho 1' : 'Gatinha 2');
+      }
+    };
+
+    window.submitSecureLogin = function() {
+      const passInput = document.getElementById('login-password-input');
+      const confInput = document.getElementById('login-password-confirm-input');
+      const errEl = document.getElementById('login-error-msg');
+      const nickInput = document.getElementById('login-nickname-input');
+
+      const isPasswordAlreadySet = !!(window.sharedState && window.sharedState.roomPassword && window.sharedState.roomPassword.trim() !== '');
+      const typedPassword = (passInput ? passInput.value.trim() : '');
+
+      if (!typedPassword) {
+        if (errEl) {
+          errEl.innerText = "Por favor, digite uma senha!";
+          errEl.classList.remove('hidden');
+        }
+        if (passInput) passInput.focus();
+        return;
+      }
+
+      // CENÁRIO 1: É O PRIMEIRO ACESSO - Criando a senha conjunta do casal
+      if (!isPasswordAlreadySet) {
+        const typedConfirm = (confInput ? confInput.value.trim() : '');
+        if (typedPassword.length < 3) {
+          if (errEl) {
+            errEl.innerText = "A senha deve ter pelo menos 3 caracteres!";
+            errEl.classList.remove('hidden');
+          }
+          if (passInput) passInput.focus();
+          return;
+        }
+        if (typedPassword !== typedConfirm) {
+          if (errEl) {
+            errEl.innerText = "As senhas não coincidem! Digite a mesma senha nos dois campos.";
+            errEl.classList.remove('hidden');
+          }
+          if (confInput) confInput.focus();
+          return;
+        }
+
+        // Salva a nova senha na estrutura compartilhada
+        window.sharedState.roomPassword = typedPassword;
+        showBannerToast("Senha do casal criada e sincronizada com sucesso! 💖🔐");
+      } 
+      // CENÁRIO 2: A SENHA JÁ EXISTE - Validando o acesso
+      else {
+        const expectedPassword = window.sharedState.roomPassword;
+        if (typedPassword !== expectedPassword) {
+          if (errEl) {
+            errEl.innerText = "Senha incorreta! Digite a senha combinada entre vocês.";
+            errEl.classList.remove('hidden');
+          }
+          if (passInput) passInput.focus();
+          return;
+        }
+      }
+
+      if (errEl) errEl.classList.add('hidden');
+
+      const selectedRole = selectedLoginTarget || 'cat1';
+      const customNick = (nickInput && nickInput.value.trim()) ? nickInput.value.trim() : (selectedRole === 'cat1' ? 'Gatinho 1' : 'Gatinha 2');
+
+      window.sharedState.myRole = selectedRole;
+      localStorage.setItem('casal_meu_gatinho', selectedRole);
+      localStorage.setItem('casal_login_done', 'true');
+      localStorage.setItem('casal_auth_token', 'valid_' + btoa(window.sharedState.roomPassword));
+
+      if (!window.sharedState.nicknames) window.sharedState.nicknames = {};
+      window.sharedState.nicknames[selectedRole] = customNick;
+
+      const modal = document.getElementById('login-modal');
+      if (modal) modal.classList.add('hidden');
+
+      window.renderFullState();
+      window.renderBackpackSlots();
+      window.updateWalletHeader();
+      window.renderLetterHistory();
+      window.saveStateToLocalCache();
+
+      // Salva imediatamente no Firestore para garantir que a senha criada sincronize com o outro aparelho
+      window.saveStateToCloud();
+
+      window.showBannerToast(`Acesso liberado com sucesso, ${customNick}! 💖🔒`);
+    };
+
+    window.lockAndLogout = function() {
+      localStorage.removeItem('casal_auth_token');
+      localStorage.removeItem('casal_login_done');
+      openLoginModal();
+      showBannerToast("Jardim bloqueado! Digite a senha para entrar. 🔒");
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.updateWalletHeader();
+      window.renderFullState();
+      window.renderBackpackSlots();
+      window.checkStreakProgress();
+      window.renderLetterHistory();
+      window.updateFloatingPreviewText();
+
+      initFirebaseSync();
+
+      const authToken = localStorage.getItem('casal_auth_token');
+      if (!authToken) {
+        openLoginModal();
+      }
+
+      const chatInput = document.getElementById('chat-input-text');
+      if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendLoveLetter();
+          }
+        });
+      }
+
+      const floatingInput = document.getElementById('floating-chat-input');
+      if (floatingInput) {
+        floatingInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendLoveLetterFromFloating();
+          }
+        });
+      }
+    });
+  </script>
+
+  <script>
+    /* 3. ECONOMIA, MERCADINHO E ALIMENTAÇÃO NA NUVEM */
+    const FOOD_ITEMS = [
+      { id: 'food_bread', name: 'Pão Quentinho', icon: '🍞', price: 3, hunger: 20, joy: 5 },
+      { id: 'food_milk', name: 'Leitinho Fresco', icon: '🥛', price: 4, hunger: 22, joy: 8 },
+      { id: 'food_salmon', name: 'Sachê Salmão', icon: '🐟', price: 6, hunger: 35, joy: 15 },
+      { id: 'food_starfruit', name: 'Fruta Estrela', icon: '🍏', price: 5, hunger: 25, joy: 10 },
+      { id: 'food_steak', name: 'Bife Suculento', icon: '🥩', price: 8, hunger: 45, joy: 20 },
+      { id: 'food_potion', name: 'Poção de Amor', icon: '🧪', price: 10, hunger: 30, joy: 30 }
+    ];
+
+    const PALETTE_COLORS = [
+      { id: 'c_branco', hex: '#ffffff', name: 'Branco Neve' },
+      { id: 'c_preto', hex: '#2b2725', name: 'Carvão' },
+      { id: 'c_ouro', hex: '#ffd166', name: 'Ouro Real' },
+      { id: 'c_esmeralda', hex: '#06d6a0', name: 'Esmeralda' },
+      { id: 'c_ceu', hex: '#118ab2', name: 'Azul Céu' },
+      { id: 'c_rubi', hex: '#ef476f', name: 'Rubi Rosa' },
+      { id: 'c_roxo', hex: '#9d4edd', name: 'Ametista' },
+      { id: 'c_ambar', hex: '#d9822b', name: 'Âmbar' }
+    ];
+
+    function updateWalletHeader() {
+      const wallet = window.getMyWallet();
+      const fDisplay = document.getElementById('wallet-fish-display');
+      const pDisplay = document.getElementById('wallet-paws-display');
+      const cDisplay = document.getElementById('wallet-couple-display');
+      if (fDisplay) fDisplay.innerText = wallet.fish;
+      if (pDisplay) pDisplay.innerText = wallet.paws;
+      if (cDisplay) cDisplay.innerText = wallet.coupleCoins;
+    }
+    window.updateWalletHeader = updateWalletHeader;
+
+    function claimDailyRewardManual() {
+      const today = new Date().toDateString();
+      const role = window.sharedState.myRole;
+      if (!window.sharedState.lastRewardDates) window.sharedState.lastRewardDates = {};
+
+      if (window.sharedState.lastRewardDates[role] === today) {
+        showBannerToast("Você já resgatou seu Peixinho de hoje! Volte amanhã 🐾");
+        return;
+      }
+
+      window.sharedState.lastRewardDates[role] = today;
+      const wallet = window.getMyWallet();
+      wallet.fish += 1;
+      window.saveStateToCloud();
+      createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 10);
+      showBannerToast("🎁 +1 Peixinho Diário resgatado e salvo na nuvem!");
+    }
+    window.claimDailyRewardManual = claimDailyRewardManual;
+
+    function toggleBackpack() {
+      const drawer = document.getElementById('backpack-drawer');
+      drawer.classList.toggle('hidden');
+      renderBackpackSlots();
+    }
+
+    function renderBackpackSlots() {
+      const container = document.getElementById('backpack-slots-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const inv = window.getMyInventory();
+      const keys = Object.keys(inv).filter(k => inv[k] > 0);
+
+      if (keys.length === 0) {
+        container.innerHTML = `<span class="text-xs text-amber-200/70 p-2">Sua mochila está vazia! Compre comidinhas no Mercadinho 🏪</span>`;
+        return;
+      }
+
+      keys.forEach(key => {
+        const item = FOOD_ITEMS.find(f => f.id === key);
+        if (!item) return;
+
+        const slot = document.createElement('div');
+        slot.className = 'flex-shrink-0 w-16 h-16 bg-[#7a4d2c] border-2 border-dashed border-[#fae19c] rounded-xl flex flex-col items-center justify-center relative cursor-grab active:cursor-grabbing select-none hover:scale-105 transition-transform';
+        slot.draggable = true;
+        slot.innerHTML = `
+          <span class="text-2xl">${item.icon}</span>
+          <span class="absolute bottom-1 right-1 text-[10px] bg-[#381f10] text-[#fae19c] px-1 rounded-md font-bold">${inv[key]}</span>
+        `;
+
+        slot.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', key);
+        });
+
+        slot.addEventListener('pointerdown', (e) => {
+          handleTouchDragFood(e, key, item.icon);
+        });
+
+        container.appendChild(slot);
+      });
+    }
+    window.renderBackpackSlots = renderBackpackSlots;
+
+    function handleTouchDragFood(e, foodKey, iconStr) {
+      if (e.pointerType === 'mouse') return;
+
+      const ghost = document.createElement('div');
+      ghost.innerText = iconStr;
+      ghost.style.position = 'fixed';
+      ghost.style.fontSize = '2.5rem';
+      ghost.style.zIndex = '999';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.transform = 'translate(-50%, -50%)';
+      ghost.style.left = `${e.clientX}px`;
+      ghost.style.top = `${e.clientY}px`;
+      document.body.appendChild(ghost);
+
+      const cat1Area = document.getElementById('cat1-drop-area');
+      const cat2Area = document.getElementById('cat2-drop-area');
+
+      function onMove(ev) {
+        ghost.style.left = `${ev.clientX}px`;
+        ghost.style.top = `${ev.clientY}px`;
+      }
+
+      function onEnd(ev) {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onEnd);
+        ghost.remove();
+
+        const elemUnder = document.elementFromPoint(ev.clientX, ev.clientY);
+        if (cat1Area && (cat1Area === elemUnder || cat1Area.contains(elemUnder))) {
+          feedCatWithItem('cat1', foodKey);
+        } else if (cat2Area && (cat2Area === elemUnder || cat2Area.contains(elemUnder))) {
+          feedCatWithItem('cat2', foodKey);
+        }
+      }
+
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onEnd);
+    }
+
+    function setupDropTargets() {
+      ['cat1-drop-area', 'cat2-drop-area'].forEach(id => {
+        const area = document.getElementById(id);
+        if (!area) return;
+
+        area.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          area.classList.add('drag-over');
+        });
+        area.addEventListener('dragleave', () => {
+          area.classList.remove('drag-over');
+        });
+        area.addEventListener('drop', (e) => {
+          e.preventDefault();
+          area.classList.remove('drag-over');
+          const foodKey = e.dataTransfer.getData('text/plain');
+          const catTarget = id.startsWith('cat1') ? 'cat1' : 'cat2';
+          feedCatWithItem(catTarget, foodKey);
+        });
+      });
+    }
+
+    function feedCatWithItem(targetCat, foodKey) {
+      const inv = window.getMyInventory();
+      if (!inv[foodKey] || inv[foodKey] <= 0) return;
+
+      const food = FOOD_ITEMS.find(f => f.id === foodKey);
+      if (!food) return;
+
+      inv[foodKey]--;
+      if (inv[foodKey] <= 0) delete inv[foodKey];
+
+      const cat = window.sharedState[targetCat];
+      cat.hunger = Math.min(100, cat.hunger + food.hunger);
+      cat.happiness = Math.min(100, cat.happiness + food.joy);
+      cat.speech = `Huum! Adorei esse ${food.name}! 😻`;
+      window.sharedState.loveScore = Math.min(100, window.sharedState.loveScore + 2);
+
+      createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 10);
+      showBannerToast(`${targetCat === 'cat1' ? 'Gatinho 1' : 'Gatinho 2'} saboreou ${food.name}! ${food.icon}`);
+      
+      renderBackpackSlots();
+      window.saveStateToCloud();
+    }
+
+    function openFoodStallModal() {
+      const grid = document.getElementById('stall-goods-grid');
+      const wallet = window.getMyWallet();
+      document.getElementById('stall-paws-count').innerText = `${wallet.paws} 🐾`;
+      grid.innerHTML = '';
+
+      FOOD_ITEMS.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-2.5 rounded-xl border-2 border-pencil text-center flex flex-col items-center justify-between shadow-sm';
+        card.innerHTML = `
+          <span class="text-3xl">${f.icon}</span>
+          <span class="text-xs font-bold mt-1">${f.name}</span>
+          <span class="text-[11px] text-amber-700 font-bold mb-1.5">${f.price} 🐾</span>
+          <button onclick="buyFoodFromStall('${f.id}')" class="sketch-btn w-full bg-amber-100 hover:bg-amber-200 text-xs py-1 rounded-lg font-bold">
+            Comprar
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+
+      document.getElementById('food-stall-modal').classList.remove('hidden');
+    }
+
+    function closeFoodStallModal() {
+      document.getElementById('food-stall-modal').classList.add('hidden');
+    }
+
+    function buyFoodFromStall(foodId) {
+      const food = FOOD_ITEMS.find(f => f.id === foodId);
+      if (!food) return;
+
+      const wallet = window.getMyWallet();
+      const inv = window.getMyInventory();
+
+      if (wallet.paws >= food.price) {
+        wallet.paws -= food.price;
+        inv[foodId] = (inv[foodId] || 0) + 1;
+        
+        window.saveStateToCloud();
+
+        document.getElementById('stall-paws-count').innerText = `${wallet.paws} 🐾`;
+        document.getElementById('vendor-balloon-text').innerText = `Obrigado! Embrulhei um(a) ${food.name} quentinho(a) pra você! 🧺`;
+        renderBackpackSlots();
+        createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 6);
+        showBannerToast(`Você comprou ${food.name}! Salvo na sua mochila na nuvem 🎒☁️`);
+      } else {
+        document.getElementById('vendor-balloon-text').innerText = `Miau... faltam patinhas! Jogue nos Minigames 🎮 para ganhar mais!`;
+      }
+    }
+
+    /* 4. LOJA VIP */
+    let currentVipTab = 'pupilas';
+    let tempPreviewCustoms = {};
+
+    const VIP_CATALOG = {
+      pupilas: [
+        { id: 'pupil_round', type: 'pupil', val: 'round', name: 'Redonda Fofa', price: 0, icon: '👀' },
+        { id: 'pupil_slit', type: 'pupil', val: 'slit', name: 'Fenda Felina', price: 2, icon: '👁️' },
+        { id: 'pupil_sparkle', type: 'pupil', val: 'sparkle', name: 'Brilho Anime', price: 3, icon: '✨' },
+        { id: 'pupil_heart', type: 'pupil', val: 'heart', name: 'Pupila Coração', price: 4, icon: '💖' }
+      ],
+      olhos: [
+        { id: 'shape_almond', type: 'eyeShape', val: 'almond', name: 'Olhos Clássicos', price: 0, icon: '😺' },
+        { id: 'shape_round', type: 'eyeShape', val: 'round', name: 'Olhos Grandes', price: 2, icon: '🥺' },
+        { id: 'shape_anime', type: 'eyeShape', val: 'anime', name: 'Olhos Estilizados', price: 3, icon: '🌟' }
+      ],
+      metadinhas: [
+        { id: 'acc_half_heart_left', type: 'accessory', val: 'half_heart_left', name: 'Metadinha Esquerda', price: 2, currency: 'couple', icon: '💔' },
+        { id: 'acc_half_heart_right', type: 'accessory', val: 'half_heart_right', name: 'Metadinha Direita', price: 2, currency: 'couple', icon: '❤️' },
+        { id: 'acc_ribbon_pair', type: 'accessory', val: 'ribbon_pair', name: 'Laço do Casal', price: 3, currency: 'couple', icon: '🎀' }
+      ],
+      acessorios: [
+        { id: 'acc_none', type: 'accessory', val: 'none', name: 'Nenhum', price: 0, icon: '🚫' },
+        { id: 'acc_bowtie', type: 'accessory', val: 'bowtie', name: 'Gravatinha', price: 2, icon: '🎀' },
+        { id: 'acc_glasses', type: 'accessory', val: 'glasses', name: 'Óculos Fofo', price: 3, icon: '👓' },
+        { id: 'acc_flower', type: 'accessory', val: 'flower', name: 'Florzinha', price: 2, icon: '🌸' },
+        { id: 'acc_crown', type: 'accessory', val: 'crown', name: 'Coroa Real', price: 5, icon: '👑' }
+      ],
+      racas: [
+        { id: 'breed_white', type: 'breed', val: 'white', name: 'Branco Neve', price: 0, icon: '🐱' },
+        { id: 'breed_orange', type: 'breed', val: 'orange', name: 'Laranjinha', price: 3, icon: '🐈' },
+        { id: 'breed_tuxedo', type: 'breed', val: 'tuxedo', name: 'Frajola', price: 3, icon: '🐧' },
+        { id: 'breed_siamese', type: 'breed', val: 'siamese', name: 'Siamês Chic', price: 4, icon: '🐾' }
+      ],
+      bocas: [
+        { id: 'mouth_cat', type: 'mouth', val: 'cat', name: 'Boquinha Clássica', price: 0, icon: '😺' },
+        { id: 'mouth_tongue', type: 'mouth', val: 'tongue', name: 'Língua Pra Fora', price: 2, icon: '👅' },
+        { id: 'mouth_vampire', type: 'mouth', val: 'vampire', name: 'Presinhas', price: 3, icon: '🧛' },
+        { id: 'mouth_smile', type: 'mouth', val: 'smile', name: 'Sorrisinho', price: 2, icon: '😸' }
+      ]
+    };
+
+    function openVipShopModal() {
+      const myRole = window.sharedState.myRole || 'cat1';
+      const myCat = window.sharedState[myRole] || window.sharedState.cat1;
+      tempPreviewCustoms = { ...myCat };
+      
+      const wallet = window.getMyWallet();
+      const fishEl = document.getElementById('shop-fish-count');
+      if (fishEl) fishEl.innerText = `${wallet.fish} 🐟`;
+      
+      const coupleEl = document.getElementById('shop-couple-coin-count');
+      if (coupleEl) coupleEl.innerText = `${wallet.coupleCoins} 💖`;
+      
+      renderShopPreview();
+      switchShopTab(currentVipTab);
+      
+      const modal = document.getElementById('vip-shop-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeVipShopModal() {
+      const modal = document.getElementById('vip-shop-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function renderShopPreview() {
+      const box = document.getElementById('shop-live-preview-box');
+      if (box) {
+        box.innerHTML = generateCatSvg({
+          ...tempPreviewCustoms,
+          expression: 'happy',
+          isFlipped: false
+        });
+      }
+    }
+
+    function switchShopTab(tabKey) {
+      currentVipTab = tabKey;
+      ['pupilas', 'olhos', 'metadinhas', 'acessorios', 'racas', 'bocas'].forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (btn) btn.className = (t === tabKey) ? 'px-2.5 py-1 rounded-lg bg-amber-200 border border-pencil font-bold' : 'px-2.5 py-1 rounded-lg bg-white border border-pencil';
+      });
+
+      const grid = document.getElementById('shop-items-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const items = VIP_CATALOG[tabKey] || [];
+      const unlockedList = window.getMyUnlockedItems();
+
+      items.forEach(item => {
+        const isUnlocked = unlockedList.includes(item.id) || item.price === 0;
+        const myCat = window.sharedState[window.sharedState.myRole] || window.sharedState.cat1;
+        const isEquipped = myCat[item.type] === item.val;
+        const priceLabel = item.currency === 'couple' ? `${item.price} 💖` : `${item.price} 🐟`;
+
+        const card = document.createElement('div');
+        card.className = 'bg-white p-2.5 rounded-xl border-2 border-pencil flex flex-col items-center justify-between text-center shadow-sm';
+        card.innerHTML = `
+          <div class="flex items-center justify-center h-12 w-full mb-1">
+            ${getVipItemSvgPreview(item.type, item.val)}
+          </div>
+          <span class="text-xs font-bold mt-1">${item.name}</span>
+          <span class="text-[11px] text-amber-800 font-bold mb-1">${isUnlocked ? 'Desbloqueado' : priceLabel}</span>
+          
+          <div class="w-full space-y-1">
+            <button onclick="previewItem('${item.type}', '${item.val}')" class="w-full text-[10px] bg-stone-100 hover:bg-stone-200 py-1 rounded border border-pencil font-semibold">
+              🔍 Testar no Provador
+            </button>
+            ${(item.type === 'pupil' || item.type === 'accessory' || item.type === 'eyeShape') ? `
+              <button onclick="openColorPaletteFor('${item.type}')" class="w-full text-[10px] bg-rose-50 hover:bg-rose-100 py-1 rounded border border-pencil font-bold text-rose-800">
+                🎨 Mudar Cor (${item.type === 'pupil' ? 'Pupila' : 'Item'})
+              </button>
+            ` : ''}
+            <button onclick="handleVipItemAction('${item.id}', '${item.type}', '${item.val}', ${item.price}, '${item.currency || 'fish'}')" class="sketch-btn w-full ${isEquipped ? 'bg-amber-300' : 'bg-amber-100 hover:bg-amber-200'} text-xs py-1 rounded-lg font-bold">
+              ${isUnlocked ? (isEquipped ? 'Equipado ✓' : 'Vestir') : 'Comprar'}
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function previewItem(type, val) {
+      tempPreviewCustoms[type] = val;
+      renderShopPreview();
+      const descEl = document.getElementById('preview-item-description');
+      if (descEl) descEl.innerText = `Testando: ${val}`;
+    }
+
+    function handleVipItemAction(itemId, type, val, price, currency) {
+      const unlockedList = window.getMyUnlockedItems();
+      const wallet = window.getMyWallet();
+      const isUnlocked = unlockedList.includes(itemId) || price === 0;
+
+      if (isUnlocked) {
+        const myRole = window.sharedState.myRole;
+        window.sharedState[myRole][type] = val;
+        tempPreviewCustoms[type] = val;
+        renderShopPreview();
+        switchShopTab(currentVipTab);
+        window.saveStateToCloud();
+        showBannerToast(`Visual equipado com sucesso! ✨`);
+      } else {
+        if (currency === 'couple') {
+          if (wallet.coupleCoins >= price) {
+            wallet.coupleCoins -= price;
+            unlockedList.push(itemId);
+
+            const myRole = window.sharedState.myRole;
+            window.sharedState[myRole][type] = val;
+
+            const coupleEl = document.getElementById('shop-couple-coin-count');
+            if (coupleEl) coupleEl.innerText = `${wallet.coupleCoins} 💖`;
+            
+            renderShopPreview();
+            switchShopTab(currentVipTab);
+            window.saveStateToCloud();
+            createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 14);
+            showBannerToast(`Metadinha desbloqueada com seu amor! 💖✨`);
+          } else {
+            showBannerToast(`Corações de casal insuficientes! Conectem diariamente para ganhar mais 💖`);
+          }
+        } else {
+          if (wallet.fish >= price) {
+            wallet.fish -= price;
+            unlockedList.push(itemId);
+
+            const myRole = window.sharedState.myRole;
+            window.sharedState[myRole][type] = val;
+
+            const fishEl = document.getElementById('shop-fish-count');
+            if (fishEl) fishEl.innerText = `${wallet.fish} 🐟`;
+            
+            renderShopPreview();
+            switchShopTab(currentVipTab);
+            window.saveStateToCloud();
+            createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 12);
+            showBannerToast(`Item desbloqueado e salvo no servidor! 🐟✨`);
+          } else {
+            showBannerToast(`Peixinhos insuficientes! Resgate no Peixinho Diário 🎁`);
+          }
+        }
+      }
+    }
+
+    let activePaletteTarget = 'pupil';
+
+    function openColorPaletteFor(targetType) {
+      activePaletteTarget = targetType;
+      const title = document.getElementById('palette-title');
+      const subtitle = document.getElementById('palette-subtitle');
+
+      if (targetType === 'pupil') {
+        title.innerText = 'Tintas para a Pupila';
+        subtitle.innerText = 'Por padrão a pupila é branca (#ffffff). Escolha ou compre uma cor nova:';
+      } else if (targetType === 'eyeShape') {
+        title.innerText = 'Cor dos Olhos (Íris)';
+        subtitle.innerText = 'Escolha a cor de fundo dos olhos do seu gatinho:';
+      } else {
+        title.innerText = 'Tinta para Acessório';
+        subtitle.innerText = 'Escolha ou compre uma cor para o seu acessório:';
+      }
+
+      const grid = document.getElementById('palette-swatches-grid');
+      grid.innerHTML = '';
+
+      PALETTE_COLORS.forEach(c => {
+        const swatch = document.createElement('div');
+        swatch.className = 'flex flex-col items-center cursor-pointer p-1.5 rounded-lg border border-pencil hover:bg-stone-100';
+        swatch.innerHTML = `
+          <div class="w-7 h-7 rounded-full border border-pencil shadow-inner" style="background-color: ${c.hex}"></div>
+          <span class="text-[10px] mt-1 font-semibold">${c.name}</span>
+        `;
+        swatch.onclick = () => applySelectedColor(c.hex);
+        grid.appendChild(swatch);
+      });
+
+      document.getElementById('palette-modal').classList.remove('hidden');
+    }
+
+    function closePaletteModal() {
+      document.getElementById('palette-modal').classList.add('hidden');
+    }
+
+    function applySelectedColor(hexColor) {
+      const myRole = window.sharedState.myRole;
+      if (activePaletteTarget === 'pupil') {
+        window.sharedState[myRole].pupilColor = hexColor;
+        tempPreviewCustoms.pupilColor = hexColor;
+      } else if (activePaletteTarget === 'eyeShape') {
+        window.sharedState[myRole].eyeColor = hexColor;
+        tempPreviewCustoms.eyeColor = hexColor;
+      } else {
+        window.sharedState[myRole].accessoryColor = hexColor;
+        tempPreviewCustoms.accessoryColor = hexColor;
+      }
+
+      window.saveStateToCloud();
+      renderShopPreview();
+      closePaletteModal();
+      showBannerToast(`Nova cor salva na nuvem! 🎨`);
+    }
+
+    function buyCustomHexColor() {
+      const wallet = window.getMyWallet();
+      if (wallet.fish >= 1) {
+        wallet.fish -= 1;
+        const hex = document.getElementById('custom-color-picker').value;
+        applySelectedColor(hex);
+        const fishEl = document.getElementById('shop-fish-count');
+        if (fishEl) fishEl.innerText = `${wallet.fish} 🐟`;
+        showBannerToast(`Tinta personalizada adquirida por 1 🐟!`);
+      } else {
+        showBannerToast(`Você precisa de 1 🐟 para comprar uma nova tinta!`);
+      }
+    }
+
+    function getVipItemSvgPreview(type, val) {
+      const myCat = window.sharedState[window.sharedState.myRole];
+      const stroke = '#2b2725';
+      const fill = myCat.accessoryColor || '#e76f51';
+      const pupilCol = myCat.pupilColor || '#ffffff';
+      const eyeCol = myCat.eyeColor || '#2b2725';
+
+      if (type === 'accessory') {
+        if (val === 'bowtie') {
+          return `<svg viewBox="0 0 80 50" class="w-16 h-10 drop-shadow-sm"><polygon points="12,10 12,40 40,25" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/><polygon points="68,10 68,40 40,25" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/><circle cx="40" cy="25" r="7" fill="#f4a261" stroke="${stroke}" stroke-width="2"/></svg>`;
+        }
+        if (val === 'glasses') {
+          return `<svg viewBox="0 0 80 40" class="w-16 h-10 drop-shadow-sm"><circle cx="24" cy="20" r="14" fill="none" stroke="${fill}" stroke-width="3"/><circle cx="56" cy="20" r="14" fill="none" stroke="${fill}" stroke-width="3"/><path d="M 38,18 Q 40,14 42,18" fill="none" stroke="${fill}" stroke-width="3"/></svg>`;
+        }
+        if (val === 'flower') {
+          return `<svg viewBox="0 0 60 60" class="w-12 h-12 drop-shadow-sm"><circle cx="20" cy="24" r="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="34" cy="18" r="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="44" cy="28" r="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="36" cy="40" r="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="22" cy="38" r="9" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="31" cy="30" r="6" fill="#f4a261" stroke="${stroke}" stroke-width="2"/></svg>`;
+        }
+        if (val === 'crown') {
+          return `<svg viewBox="0 0 70 50" class="w-14 h-10 drop-shadow-sm"><path d="M 12,40 L 14,20 L 26,30 L 35,10 L 44,30 L 56,20 L 58,40 Z" fill="${fill}" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round"/><circle cx="35" cy="10" r="3.5" fill="#e76f51"/></svg>`;
+        }
+        if (val === 'half_heart_left') {
+          return `<svg viewBox="0 0 60 50" class="w-12 h-10 drop-shadow-sm"><path d="M 30,14 C 30,6 16,3 16,14 C 16,24 30,36 30,38 Z" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/><line x1="8" y1="12" x2="18" y2="10" stroke="${stroke}" stroke-width="2" stroke-dasharray="2,2"/></svg>`;
+        }
+        if (val === 'half_heart_right') {
+          return `<svg viewBox="0 0 60 50" class="w-12 h-10 drop-shadow-sm"><path d="M 30,14 C 30,6 44,3 44,14 C 44,24 30,36 30,38 Z" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/><line x1="52" y1="12" x2="42" y2="10" stroke="${stroke}" stroke-width="2" stroke-dasharray="2,2"/></svg>`;
+        }
+        if (val === 'ribbon_pair') {
+          return `<svg viewBox="0 0 60 50" class="w-12 h-10 drop-shadow-sm"><circle cx="30" cy="20" r="7" fill="${fill}" stroke="${stroke}" stroke-width="2"/><path d="M 25,25 L 15,40 M 35,25 L 45,40" stroke="${fill}" stroke-width="4" stroke-linecap="round"/></svg>`;
+        }
+        return `<span class="text-2xl">🚫</span>`;
+      }
+
+      if (type === 'pupil') {
+        let pupilInner = '';
+        if (val === 'slit') {
+          pupilInner = `<ellipse cx="30" cy="25" rx="3.5" ry="16" fill="${pupilCol}" />`;
+        } else if (val === 'sparkle') {
+          pupilInner = `<polygon points="30,16 32,21 37,22 32,25 30,30 28,25 23,22 28,21" fill="${pupilCol}"/><circle cx="37" cy="30" r="2.5" fill="${pupilCol}"/>`;
+        } else if (val === 'heart') {
+          pupilInner = `<path d="M 30,22 C 30,18 25,16 23,20 C 21,24 30,29 30,31 C 30,29 39,24 37,20 C 35,16 30,18 30,22 Z" fill="${pupilCol}" />`;
+        } else {
+          pupilInner = `<circle cx="33" cy="21" r="5" fill="${pupilCol}" /><circle cx="27" cy="29" r="2.5" fill="${pupilCol}" opacity="0.8"/>`;
+        }
+        return `<svg viewBox="0 0 60 50" class="w-12 h-10"><ellipse cx="30" cy="25" rx="16" ry="19" fill="${eyeCol}" stroke="${stroke}" stroke-width="2"/>${pupilInner}</svg>`;
+      }
+
+      if (type === 'eyeShape') {
+        if (val === 'round') {
+          return `<svg viewBox="0 0 60 50" class="w-12 h-10"><circle cx="30" cy="25" r="17" fill="${eyeCol}" stroke="${stroke}" stroke-width="2"/><circle cx="34" cy="22" r="4.5" fill="#fff"/></svg>`;
+        }
+        if (val === 'anime') {
+          return `<svg viewBox="0 0 60 50" class="w-12 h-10"><path d="M 12,22 Q 30,10 48,24 Q 30,42 12,22 Z" fill="${eyeCol}" stroke="${stroke}" stroke-width="2"/><circle cx="35" cy="22" r="4" fill="#fff"/></svg>`;
+        }
+        return `<svg viewBox="0 0 60 50" class="w-12 h-10"><ellipse cx="30" cy="25" rx="14" ry="18" fill="${eyeCol}" stroke="${stroke}" stroke-width="2"/><circle cx="34" cy="21" r="4" fill="#fff"/></svg>`;
+      }
+
+      if (type === 'breed') {
+        if (val === 'orange') {
+          return `<svg viewBox="0 0 50 40" class="w-12 h-10"><circle cx="25" cy="20" r="16" fill="#f4a261" stroke="${stroke}" stroke-width="2"/><path d="M 25,10 L 25,18 M 20,9 Q 22,15 19,19 M 30,9 Q 28,15 31,19" stroke="#b3581d" stroke-width="2.5" fill="none"/></svg>`;
+        }
+        if (val === 'tuxedo') {
+          return `<svg viewBox="0 0 50 40" class="w-12 h-10"><circle cx="25" cy="20" r="16" fill="#3d3a37" stroke="${stroke}" stroke-width="2"/><polygon points="25,16 20,28 30,28" fill="#fffdf9"/></svg>`;
+        }
+        if (val === 'siamese') {
+          return `<svg viewBox="0 0 50 40" class="w-12 h-10"><circle cx="25" cy="20" r="16" fill="#ebdcc9" stroke="${stroke}" stroke-width="2"/><ellipse cx="25" cy="22" rx="10" ry="7" fill="#3d281d" opacity="0.85"/></svg>`;
+        }
+        return `<svg viewBox="0 0 50 40" class="w-12 h-10"><circle cx="25" cy="20" r="16" fill="#fffdf9" stroke="${stroke}" stroke-width="2"/><polygon points="18,10 22,15 18,18" fill="#f7c2c2"/><polygon points="32,10 28,15 32,18" fill="#f7c2c2"/></svg>`;
+      }
+
+      if (type === 'mouth') {
+        if (val === 'tongue') {
+          return `<svg viewBox="0 0 50 30" class="w-12 h-8"><path d="M 18,12 Q 25,18 32,12" fill="none" stroke="${stroke}" stroke-width="2.5"/><path d="M 23,15 C 23,23 27,23 27,15 Z" fill="#e74c3c" stroke="${stroke}" stroke-width="1.5"/></svg>`;
+        }
+        if (val === 'vampire') {
+          return `<svg viewBox="0 0 50 30" class="w-12 h-8"><path d="M 18,12 Q 25,18 32,12" fill="none" stroke="${stroke}" stroke-width="2.5"/><polygon points="21,14 22,20 23,14" fill="#fff" stroke="${stroke}" stroke-width="1"/><polygon points="27,14 28,20 29,14" fill="#fff" stroke="${stroke}" stroke-width="1"/></svg>`;
+        }
+        if (val === 'smile') {
+          return `<svg viewBox="0 0 50 30" class="w-12 h-8"><path d="M 16,10 Q 25,24 34,10" fill="none" stroke="${stroke}" stroke-width="3" stroke-linecap="round"/></svg>`;
+        }
+        return `<svg viewBox="0 0 50 30" class="w-12 h-8"><path d="M 18,14 Q 25,20 32,14" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linecap="round"/></svg>`;
+      }
+
+      return `<span class="text-2xl">✨</span>`;
+    }
+
+    /* 5. VÍNCULO, OFENSIVA E VALIDAÇÃO DIÁRIA */
+    function getTodayDateString() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    function generateDailyCodeForRole(role, dateStr) {
+      let hash = 0;
+      const seed = `${dateStr}_${role}_jardim_cat_v2`;
+      for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+      }
+      const abs = Math.abs(hash);
+      const codeNum = 100000 + (abs % 900000);
+      return String(codeNum);
+    }
+
+    function copyMyDailyCode() {
+      const today = getTodayDateString();
+      const myRole = window.sharedState.myRole || 'cat1';
+      const myCode = generateDailyCodeForRole(myRole, today);
+
+      try {
+        const tempInput = document.createElement('input');
+        tempInput.value = myCode;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showBannerToast(`Código ${myCode} copiado! Mande para o seu amor 🐾`);
+      } catch (e) {
+        showBannerToast(`Seu código é: ${myCode}`);
+      }
+    }
+    window.copyMyDailyCode = copyMyDailyCode;
+
+    function checkStreakProgress() {
+      const today = getTodayDateString();
+      const myRole = window.sharedState.myRole || 'cat1';
+      const partnerRole = (myRole === 'cat1') ? 'cat2' : 'cat1';
+
+      const myCode = generateDailyCodeForRole(myRole, today);
+
+      const codeBox = document.getElementById('daily-generated-code-box');
+      if (codeBox) codeBox.innerText = myCode;
+      
+      const badgeIcon = document.getElementById('daily-lock-icon');
+      const badgeText = document.getElementById('daily-lock-text');
+      const cat1Overlay = document.getElementById('cat1-locked-overlay');
+      const cat2Overlay = document.getElementById('cat2-locked-overlay');
+
+      const isSynced = window.sharedState.presence.syncedToday && window.sharedState.presence.lastSyncedDate === today;
+
+      if (isSynced) {
+        if (badgeIcon) badgeIcon.innerText = '🔓';
+        if (badgeText) badgeText.innerText = 'Vínculo Ativo Hoje';
+        if (cat1Overlay) cat1Overlay.classList.add('hidden');
+        if (cat2Overlay) cat2Overlay.classList.add('hidden');
+      } else {
+        if (badgeIcon) badgeIcon.innerText = '🔒';
+        if (badgeText) badgeText.innerText = 'Sincronizar Hoje';
+        
+        if (partnerRole === 'cat1') {
+          if (cat1Overlay) cat1Overlay.classList.remove('hidden');
+          if (cat2Overlay) cat2Overlay.classList.add('hidden');
+        } else {
+          if (cat2Overlay) cat2Overlay.classList.remove('hidden');
+          if (cat1Overlay) cat1Overlay.classList.add('hidden');
+        }
+      }
+
+      const headerStreak = document.getElementById('header-streak-badge');
+      if (headerStreak) headerStreak.innerText = `${window.sharedState.streak.current} Dias Juntos 🔥`;
+      
+      const curDisplay = document.getElementById('streak-current-display');
+      if (curDisplay) curDisplay.innerText = window.sharedState.streak.current;
+      
+      const bestDisplay = document.getElementById('streak-best-display');
+      if (bestDisplay) bestDisplay.innerText = window.sharedState.streak.best;
+      
+      const totDisplay = document.getElementById('streak-total-display');
+      if (totDisplay) totDisplay.innerText = window.sharedState.streak.totalDays;
+
+      const s1 = document.getElementById('score-cat1-wins');
+      const s2 = document.getElementById('score-cat2-wins');
+      const st = document.getElementById('score-ties');
+      const pCoins = document.getElementById('profile-couple-coins');
+      
+      if (s1) s1.innerText = window.sharedState.scores.cat1Wins;
+      if (s2) s2.innerText = window.sharedState.scores.cat2Wins;
+      if (st) st.innerText = window.sharedState.scores.ties;
+      if (pCoins) pCoins.innerText = `${window.getMyWallet().coupleCoins} 💖`;
+
+      const l1 = document.getElementById('score-cat1-name-label');
+      const l2 = document.getElementById('score-cat2-name-label');
+      if (l1 && window.sharedState.nicknames) l1.innerText = window.sharedState.nicknames.cat1 || 'Gatinho 1';
+      if (l2 && window.sharedState.nicknames) l2.innerText = window.sharedState.nicknames.cat2 || 'Gatinho 2';
+    }
+    window.checkStreakProgress = checkStreakProgress;
+
+    function openPartnerProfileModal() {
+      checkStreakProgress();
+      document.getElementById('partner-profile-modal').classList.remove('hidden');
+    }
+    function closePartnerProfileModal() {
+      document.getElementById('partner-profile-modal').classList.add('hidden');
+    }
+
+    function openSyncModal() {
+      checkStreakProgress();
+      document.getElementById('sync-modal').classList.remove('hidden');
+    }
+    function closeSyncModal() {
+      document.getElementById('sync-modal').classList.add('hidden');
+    }
+
+    function submitPartnerDailyCode() {
+      const input = document.getElementById('partner-sync-input');
+      const enteredCode = (input.value || '').trim();
+      const today = getTodayDateString();
+      const myRole = window.sharedState.myRole || 'cat1';
+      const partnerRole = (myRole === 'cat1') ? 'cat2' : 'cat1';
+      
+      const expectedCode = generateDailyCodeForRole(partnerRole, today);
+
+      if (enteredCode === expectedCode) {
+        completeDailyValidation();
+        closeSyncModal();
+        input.value = '';
+      } else {
+        showBannerToast(`Código de 6 dígitos inválido! Peça o código de hoje para o seu amor 🐾`);
+      }
+    }
+    window.submitPartnerDailyCode = submitPartnerDailyCode;
+
+    async function triggerWebNfcSync() {
+      if ('NDEFReader' in window) {
+        try {
+          const ndef = new NDEFReader();
+          await ndef.scan();
+          showBannerToast(`Aproxime do celular do seu parceiro... 📡`);
+
+          ndef.addEventListener("reading", () => {
+            completeDailyValidation();
+            closeSyncModal();
+          });
+        } catch (error) {
+          showBannerToast(`NFC não iniciado: ${error.message}. Use o código de 6 dígitos!`);
+        }
+      } else {
+        showBannerToast(`Web NFC não suportado neste aparelho. Use o Código de 6 dígitos logo abaixo! 🐾`);
+      }
+    }
+
+    function completeDailyValidation() {
+      const today = getTodayDateString();
+      window.sharedState.presence.syncedToday = true;
+      window.sharedState.presence.lastSyncedDate = today;
+
+      window.sharedState.streak.current += 1;
+      window.sharedState.streak.totalDays += 1;
+      if (window.sharedState.streak.current > window.sharedState.streak.best) {
+        window.sharedState.streak.best = window.sharedState.streak.current;
+      }
+      window.sharedState.streak.lastDailyDate = today;
+
+      // Recompensa diária estritamente limitada a 1 moeda por dia para cada um
+      window.sharedState.wallets.cat1.coupleCoins += 1;
+      window.sharedState.wallets.cat2.coupleCoins += 1;
+
+      showBannerToast(`Vínculo de hoje validado! +1 Coração Dourado 💖 salvo no Firestore!`);
+
+      window.saveStateToCloud();
+      createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 20);
+      checkStreakProgress();
+    }
+
+    /* 6. CENTRAL DE JOGOS & MULTIPLAYER */
+    let currentGamesTab = 'online';
+
+    function openGamesHubModal() {
+      document.getElementById('games-hub-modal').classList.remove('hidden');
+      switchGamesTab('online');
+    }
+    function closeGamesHubModal() {
+      document.getElementById('games-hub-modal').classList.add('hidden');
+    }
+
+    function switchGamesTab(tab) {
+      currentGamesTab = tab;
+      const bOnline = document.getElementById('btn-tab-online');
+      const bSolo = document.getElementById('btn-tab-solo');
+      if (bOnline) bOnline.className = (tab === 'online') ? 'px-3 py-1 rounded-xl bg-amber-200 border border-pencil font-bold' : 'px-3 py-1 rounded-xl bg-white border border-pencil';
+      if (bSolo) bSolo.className = (tab === 'solo') ? 'px-3 py-1 rounded-xl bg-amber-200 border border-pencil font-bold' : 'px-3 py-1 rounded-xl bg-white border border-pencil';
+
+      const container = document.getElementById('games-list-container');
+      container.innerHTML = '';
+
+      if (tab === 'online') {
+        const card1 = document.createElement('div');
+        card1.className = 'bg-white p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        card1.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">❌⭕</span>
+            <div>
+              <h4 class="text-xs font-bold text-pencil">Jogo da Velha Felino</h4>
+              <p class="text-[11px] text-pencil/70">Disputem turnos ao vivo no tabuleiro! (+8 🐾)</p>
+            </div>
+          </div>
+          <button onclick="openTicTacToeModal()" class="sketch-btn bg-amber-100 hover:bg-amber-200 text-xs px-3 py-1.5 rounded-xl font-bold">
+            Jogar Online
+          </button>
+        `;
+        container.appendChild(card1);
+
+        const card2 = document.createElement('div');
+        card2.className = 'bg-white p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        card2.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">⚡🥣</span>
+            <div>
+              <h4 class="text-xs font-bold text-pencil">Pata Rápida (Reação)</h4>
+              <p class="text-[11px] text-pencil/70">Quem tocar na tigela primeiro ganha! (+6 🐾)</p>
+            </div>
+          </div>
+          <button onclick="openReactionModal()" class="sketch-btn bg-rose-100 hover:bg-rose-200 text-xs px-3 py-1.5 rounded-xl font-bold text-rose-900">
+            Jogar Online
+          </button>
+        `;
+        container.appendChild(card2);
+
+        const card3 = document.createElement('div');
+        card3.className = 'bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        card3.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">🏒🐾</span>
+            <div>
+              <h4 class="text-xs font-bold text-amber-950">Air Hockey do Casal</h4>
+              <p class="text-[11px] text-pencil/70">Disputa no gelo sincronizada na nuvem! (+10 🐾)</p>
+            </div>
+          </div>
+          <button onclick="openAirHockeyModal('online')" class="sketch-btn bg-amber-300 hover:bg-amber-400 text-xs px-3 py-1.5 rounded-xl font-bold text-stone-900">
+            Jogar Online
+          </button>
+        `;
+        container.appendChild(card3);
+      } else {
+        const card1 = document.createElement('div');
+        card1.className = 'bg-white p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        card1.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">☁️🐾</span>
+            <div>
+              <h4 class="text-xs font-bold text-pencil">Pula-Pula nas Nuvens (Sky Hop)</h4>
+              <p class="text-[11px] text-pencil/70">Estilo clássico do Pou! Pule com os 2 gatinhos! (+10 🐾)</p>
+            </div>
+          </div>
+          <button onclick="openSkyHopModal()" class="sketch-btn bg-emerald-100 hover:bg-emerald-200 text-xs px-3 py-1.5 rounded-xl font-bold text-emerald-950">
+            Jogar Solo/Co-op
+          </button>
+        `;
+        container.appendChild(card1);
+
+        const cardAirHockeySolo = document.createElement('div');
+        cardAirHockeySolo.className = 'bg-white p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        cardAirHockeySolo.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">🤖🏒</span>
+            <div>
+              <h4 class="text-xs font-bold text-pencil">Air Hockey vs Gato Robô</h4>
+              <p class="text-[11px] text-pencil/70">Treine contra a IA ágil dos gatinhos! (+10 🐾)</p>
+            </div>
+          </div>
+          <button onclick="openAirHockeyModal('bot')" class="sketch-btn bg-blue-100 hover:bg-blue-200 text-xs px-3 py-1.5 rounded-xl font-bold text-blue-900">
+            Treinar Solo
+          </button>
+        `;
+        container.appendChild(cardAirHockeySolo);
+
+        const card2 = document.createElement('div');
+        card2.className = 'bg-white p-3 rounded-2xl border-2 border-pencil flex items-center justify-between shadow-sm';
+        card2.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="text-3xl">🧶✨</span>
+            <div>
+              <h4 class="text-xs font-bold text-pencil">Pegue o Novelo & Ratinho</h4>
+              <p class="text-[11px] text-pencil/70">Toque rápido nos alvos antes que sumam! (+8 🐾)</p>
+            </div>
+          </div>
+          <button onclick="startQuickNoveloGame()" class="sketch-btn bg-blue-100 hover:bg-blue-200 text-xs px-3 py-1.5 rounded-xl font-bold text-blue-900">
+            Jogar Rápido
+          </button>
+        `;
+        container.appendChild(card2);
+      }
+    }
+
+    /* JOGO DA VELHA */
+    function openTicTacToeModal() {
+      closeGamesHubModal();
+      document.getElementById('tictactoe-modal').classList.remove('hidden');
+      renderTicTacToeBoard();
+    }
+    function closeTicTacToeModal() {
+      document.getElementById('tictactoe-modal').classList.add('hidden');
+    }
+
+    function renderTicTacToeBoard() {
+      const grid = document.getElementById('ttt-board-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const ttt = window.sharedState.tictactoe;
+      const myRole = window.sharedState.myRole;
+      const mySymbol = myRole === 'cat1' ? '🐾' : '🐟';
+      document.getElementById('ttt-my-symbol').innerText = `${mySymbol} (${myRole === 'cat1' ? 'Gatinho 1' : 'Gatinho 2'})`;
+
+      const turnText = ttt.turn === 'cat1' ? 'Vez do Gatinho 1 (🐾)' : 'Vez do Gatinho 2 (🐟)';
+      document.getElementById('ttt-turn-indicator').innerText = turnText;
+
+      ttt.board.forEach((cell, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-xl border-2 border-pencil font-bold text-2xl flex items-center justify-center hover:bg-amber-50 active:scale-95 transition-transform shadow-sm';
+        btn.innerText = cell;
+        btn.onclick = () => handleTicTacToeMove(idx);
+        grid.appendChild(btn);
+      });
+
+      if (ttt.winner) {
+        document.getElementById('ttt-status-msg').innerText = `Vencedor: ${ttt.winner}! 🎉`;
+      } else {
+        document.getElementById('ttt-status-msg').innerText = ttt.turn === myRole ? 'É a sua vez de jogar!' : 'Aguardando o seu amor jogar...';
+      }
+    }
+    window.renderTicTacToeBoard = renderTicTacToeBoard;
+
+    function handleTicTacToeMove(index) {
+      const ttt = window.sharedState.tictactoe;
+      const myRole = window.sharedState.myRole;
+
+      if (ttt.winner || ttt.board[index] !== '' || ttt.turn !== myRole) {
+        return;
+      }
+
+      const symbol = myRole === 'cat1' ? '🐾' : '🐟';
+      ttt.board[index] = symbol;
+
+      const wins = [
+        [0,1,2], [3,4,5], [6,7,8],
+        [0,3,6], [1,4,7], [2,5,8],
+        [0,4,8], [2,4,6]
+      ];
+
+      let won = false;
+      for (let w of wins) {
+        if (ttt.board[w[0]] && ttt.board[w[0]] === ttt.board[w[1]] && ttt.board[w[1]] === ttt.board[w[2]]) {
+          won = true;
+          break;
+        }
+      }
+
+      if (won) {
+        ttt.winner = myRole === 'cat1' ? 'Gatinho 1 🐱' : 'Gatinho 2 🐱';
+        if (myRole === 'cat1') window.sharedState.scores.cat1Wins++;
+        else window.sharedState.scores.cat2Wins++;
+        
+        window.getMyWallet().paws += 8;
+        showBannerToast(`Parabéns! Você venceu e ganhou +8 🐾 salvos na nuvem!`);
+      } else if (!ttt.board.includes('')) {
+        ttt.winner = 'Empate 🤝';
+        window.sharedState.scores.ties++;
+        window.getMyWallet().paws += 4;
+        showBannerToast(`Deu velha! Empate fofo: +4 🐾 salvos na nuvem!`);
+      } else {
+        ttt.turn = myRole === 'cat1' ? 'cat2' : 'cat1';
+      }
+
+      window.saveStateToCloud();
+    }
+
+    function resetTicTacToeGame() {
+      window.sharedState.tictactoe = {
+        board: Array(9).fill(''),
+        turn: 'cat1',
+        winner: ''
+      };
+      window.saveStateToCloud();
+      showBannerToast(`Tabuleiro reiniciado! 🐾`);
+    }
+
+    /* PATA RÁPIDA */
+    let reactionTimer = null;
+    function openReactionModal() {
+      closeGamesHubModal();
+      document.getElementById('reaction-modal').classList.remove('hidden');
+    }
+    function closeReactionModal() {
+      clearTimeout(reactionTimer);
+      document.getElementById('reaction-modal').classList.add('hidden');
+    }
+
+    function startReactionRound() {
+      const arena = document.getElementById('reaction-arena');
+      const text = document.getElementById('reaction-prompt-text');
+      arena.style.backgroundColor = '#f7dede';
+      text.innerText = 'Prepare-se... Não toque ainda!';
+      window.sharedState.reaction = { state: 'waiting', winner: '' };
+      window.saveStateToCloud();
+
+      const delay = Math.random() * 2500 + 1500;
+      clearTimeout(reactionTimer);
+      reactionTimer = setTimeout(() => {
+        arena.style.backgroundColor = '#ffd166';
+        text.innerText = 'TOQUE AGORA!! ⚡⚡';
+        window.sharedState.reaction.state = 'ready';
+        window.saveStateToCloud();
+      }, delay);
+    }
+
+    function handleReactionTap() {
+      const reaction = window.sharedState.reaction;
+      const myRole = window.sharedState.myRole;
+
+      if (reaction.state === 'ready') {
+        reaction.state = 'finished';
+        reaction.winner = myRole;
+        window.getMyWallet().paws += 6;
+        window.saveStateToCloud();
+
+        createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 10);
+        showBannerToast(`Você foi o mais rápido! +6 Patinhas 🐾 salvas no servidor!`);
+        document.getElementById('reaction-prompt-text').innerText = `Ganhador: ${myRole === 'cat1' ? 'Gatinho 1' : 'Gatinho 2'}! 🎉`;
+      } else if (reaction.state === 'waiting') {
+        showBannerToast(`Você tocou cedo demais! Espere o sinal! ❌`);
+      }
+    }
+
+    /* PULA-PULA NAS NUVENS */
+    let skyHopRunning = false;
+    let skyScore = 0;
+
+    function openSkyHopModal() {
+      closeGamesHubModal();
+      document.getElementById('skyhop-modal').classList.remove('hidden');
+    }
+    function closeSkyHopModal() {
+      skyHopRunning = false;
+      document.getElementById('skyhop-modal').classList.add('hidden');
+    }
+
+    function startSkyHopGame() {
+      const canvas = document.getElementById('skyhop-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+
+      skyScore = 0;
+      skyHopRunning = true;
+      document.getElementById('skyhop-score').innerText = '0';
+
+      let catY = canvas.height - 40;
+      let vy = -9;
+      let platforms = [
+        { x: canvas.width / 2 - 35, y: canvas.height - 30, w: 70 },
+        { x: canvas.width / 4, y: canvas.height - 90, w: 65 },
+        { x: canvas.width / 1.5, y: canvas.height - 150, w: 65 },
+        { x: canvas.width / 3, y: canvas.height - 210, w: 65 }
+      ];
+
+      function loop() {
+        if (!skyHopRunning) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        vy += 0.35;
+        catY += vy;
+
+        ctx.fillStyle = '#ffffff';
+        platforms.forEach(p => {
+          ctx.beginPath();
+          ctx.roundRect(p.x, p.y, p.w, 14, 8);
+          ctx.fill();
+          ctx.strokeStyle = '#2b2725';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          if (vy > 0 && catY >= p.y - 15 && catY <= p.y + 5 && (canvas.width / 2 >= p.x && canvas.width / 2 <= p.x + p.w)) {
+            vy = -8.5;
+            skyScore += 1;
+            document.getElementById('skyhop-score').innerText = skyScore;
+          }
+        });
+
+        ctx.font = '24px sans-serif';
+        ctx.fillText('🐱', canvas.width / 2 - 20, catY);
+        ctx.fillText('🐱', canvas.width / 2 + 5, catY);
+
+        if (catY < canvas.height / 2) {
+          catY = canvas.height / 2;
+          platforms.forEach(p => {
+            p.y -= vy;
+            if (p.y > canvas.height) {
+              p.y = 0;
+              p.x = Math.random() * (canvas.width - 70);
+            }
+          });
+        }
+
+        if (catY > canvas.height + 20) {
+          skyHopRunning = false;
+          const pawsEarned = Math.max(2, skyScore * 2);
+          window.getMyWallet().paws += pawsEarned;
+          window.saveStateToCloud();
+          showBannerToast(`Fim de jogo! Vocês faturaram +${pawsEarned} 🐾 Patinhas salvas na nuvem!`);
+          return;
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      loop();
+    }
+
+    /* 8. AIR HOCKEY FELINO */
+    let airHockeyMode = 'bot';
+    let airHockeyRunning = false;
+    let airHockeyAnimationId = null;
+    let ahCanvas = null;
+    let ahCtx = null;
+
+    const ahState = {
+      puck: { x: 0, y: 0, vx: 0, vy: 0, radius: 13 },
+      player: { x: 0, y: 0, targetX: 0, targetY: 0, radius: 24 },
+      opponent: { x: 0, y: 0, targetX: 0, targetY: 0, radius: 24, botSpeed: 3.4 },
+      score1: 0,
+      score2: 0,
+      maxScore: 5,
+      goalWidth: 110,
+      isPausedForGoal: false,
+      lastOnlineSyncTime: 0
+    };
+
+    function openAirHockeyModal(mode = 'bot') {
+      closeGamesHubModal();
+      airHockeyMode = mode;
+      const modal = document.getElementById('airhockey-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      const overlay = document.getElementById('airhockey-overlay');
+      if (overlay) overlay.classList.remove('hidden');
+
+      const desc = document.getElementById('airhockey-mode-desc');
+      const title = document.getElementById('airhockey-overlay-title');
+      const hint = document.getElementById('airhockey-hint-txt');
+
+      if (mode === 'bot') {
+        if (desc) desc.innerText = 'Modo Solo: você contra o Gato Robô 🤖';
+        if (title) title.innerText = 'Air Hockey vs Bot 🤖';
+        if (hint) hint.innerText = 'Defenda seu gol e vença o Robô!';
+      } else {
+        if (desc) desc.innerText = 'Modo Casal: sincronizado na nuvem 🐾';
+        if (title) title.innerText = 'Air Hockey do Casal 💖';
+        if (hint) hint.innerText = 'Jogue com seu amor em tempo real!';
+      }
+
+      setTimeout(() => {
+        setupAirHockeyCanvas();
+      }, 50);
+    }
+    window.openAirHockeyModal = openAirHockeyModal;
+
+    function closeAirHockeyModal() {
+      airHockeyRunning = false;
+      if (airHockeyAnimationId) cancelAnimationFrame(airHockeyAnimationId);
+      const modal = document.getElementById('airhockey-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+    window.closeAirHockeyModal = closeAirHockeyModal;
+
+    function setupAirHockeyCanvas() {
+      ahCanvas = document.getElementById('airhockey-canvas');
+      if (!ahCanvas) return;
+      const container = document.getElementById('airhockey-canvas-container');
+      ahCanvas.width = container.clientWidth || 320;
+      ahCanvas.height = container.clientHeight || 380;
+      ahCtx = ahCanvas.getContext('2d');
+
+      const w = ahCanvas.width;
+      const h = ahCanvas.height;
+
+      ahState.player.x = w / 2;
+      ahState.player.y = h * 0.82;
+      ahState.player.targetX = w / 2;
+      ahState.player.targetY = h * 0.82;
+
+      ahState.opponent.x = w / 2;
+      ahState.opponent.y = h * 0.18;
+      ahState.opponent.targetX = w / 2;
+      ahState.opponent.targetY = h * 0.18;
+
+      resetPuckToCenter();
+      setupAirHockeyInput();
+      drawAirHockeyFrame();
+    }
+
+    function setupAirHockeyInput() {
+      if (!ahCanvas) return;
+
+      function updatePaddlePos(clientX, clientY) {
+        if (!ahCanvas || !airHockeyRunning) return;
+        const rect = ahCanvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        const r = ahState.player.radius;
+        ahState.player.targetX = Math.max(r, Math.min(ahCanvas.width - r, x));
+        ahState.player.targetY = Math.max(ahCanvas.height / 2 + r + 4, Math.min(ahCanvas.height - r - 4, y));
+      }
+
+      ahCanvas.onpointermove = (e) => {
+        updatePaddlePos(e.clientX, e.clientY);
+      };
+      ahCanvas.onpointerdown = (e) => {
+        updatePaddlePos(e.clientX, e.clientY);
+      };
+    }
+
+    function resetPuckToCenter(scoredTowardsTop = false) {
+      if (!ahCanvas) return;
+      ahState.puck.x = ahCanvas.width / 2;
+      ahState.puck.y = ahCanvas.height / 2;
+      ahState.puck.vx = (Math.random() - 0.5) * 2;
+      ahState.puck.vy = scoredTowardsTop ? 2.5 : -2.5;
+    }
+
+    function startAirHockeyGame(mode = 'bot') {
+      airHockeyMode = mode;
+      const overlay = document.getElementById('airhockey-overlay');
+      if (overlay) overlay.classList.add('hidden');
+
+      const myRole = window.sharedState.myRole || 'cat1';
+      const myNick = (window.sharedState.nicknames && window.sharedState.nicknames[myRole]) || (myRole === 'cat1' ? 'Gatinho 1' : 'Gatinha 2');
+      const partnerRole = myRole === 'cat1' ? 'cat2' : 'cat1';
+      const partnerNick = (window.sharedState.nicknames && window.sharedState.nicknames[partnerRole]) || (myRole === 'cat1' ? 'Gatinha 2' : 'Gatinho 1');
+
+      const p1El = document.getElementById('airhockey-p1-name');
+      const p2El = document.getElementById('airhockey-p2-name');
+      if (p1El) p1El.innerText = myNick;
+      if (p2El) p2El.innerText = mode === 'bot' ? 'Gato Bot 🤖' : partnerNick;
+
+      ahState.score1 = 0;
+      ahState.score2 = 0;
+      updateAirHockeyScoreboard();
+
+      setupAirHockeyCanvas();
+      airHockeyRunning = true;
+      ahState.isPausedForGoal = false;
+
+      if (airHockeyAnimationId) cancelAnimationFrame(airHockeyAnimationId);
+      airHockeyAnimationId = requestAnimationFrame(airHockeyGameLoop);
+
+      showBannerToast(mode === 'bot' ? "Jogo iniciado contra o Bot! Boa sorte! 🐾" : "Conectado na mesa online do casal! 🏒");
+    }
+    window.startAirHockeyGame = startAirHockeyGame;
+
+    function updateAirHockeyScoreboard() {
+      const s1 = document.getElementById('airhockey-score-p1');
+      const s2 = document.getElementById('airhockey-score-p2');
+      if (s1) s1.innerText = ahState.score1;
+      if (s2) s2.innerText = ahState.score2;
+    }
+
+    function airHockeyGameLoop(timestamp) {
+      if (!airHockeyRunning || !ahCanvas) return;
+
+      updateAirHockeyPhysics();
+      drawAirHockeyFrame();
+
+      airHockeyAnimationId = requestAnimationFrame(airHockeyGameLoop);
+    }
+
+    function updateAirHockeyPhysics() {
+      const w = ahCanvas.width;
+      const h = ahCanvas.height;
+
+      ahState.player.x += (ahState.player.targetX - ahState.player.x) * 0.45;
+      ahState.player.y += (ahState.player.targetY - ahState.player.y) * 0.45;
+
+      if (airHockeyMode === 'bot') {
+        const puck = ahState.puck;
+        const opp = ahState.opponent;
+
+        let desiredX = puck.x;
+        let desiredY = h * 0.18;
+
+        if (puck.y < h * 0.52 && puck.vy <= 0) {
+          desiredY = Math.min(h * 0.44, Math.max(opp.radius + 6, puck.y - 12));
+          desiredX = puck.x + (puck.vx * 3.5);
+        } else {
+          desiredX = w / 2 + Math.sin(Date.now() * 0.003) * 25;
+          desiredY = h * 0.16;
+        }
+
+        desiredX = Math.max(opp.radius, Math.min(w - opp.radius, desiredX));
+        desiredY = Math.max(opp.radius + 4, Math.min(h / 2 - opp.radius - 4, desiredY));
+
+        opp.x += (desiredX - opp.x) * 0.09;
+        opp.y += (desiredY - opp.y) * 0.09;
+      } else {
+        handleAirHockeyOnlineSync();
+      }
+
+      if (ahState.isPausedForGoal) return;
+
+      const p = ahState.puck;
+
+      p.vx *= 0.992;
+      p.vy *= 0.992;
+
+      const speed = Math.hypot(p.vx, p.vy);
+      const maxSpd = 12.5;
+      if (speed > maxSpd) {
+        p.vx = (p.vx / speed) * maxSpd;
+        p.vy = (p.vy / speed) * maxSpd;
+      }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x - p.radius < 4) {
+        p.x = 4 + p.radius;
+        p.vx = -p.vx * 0.85;
+      } else if (p.x + p.radius > w - 4) {
+        p.x = w - 4 - p.radius;
+        p.vx = -p.vx * 0.85;
+      }
+
+      const goalLeft = (w - ahState.goalWidth) / 2;
+      const goalRight = goalLeft + ahState.goalWidth;
+
+      if (p.y - p.radius <= 4) {
+        if (p.x >= goalLeft && p.x <= goalRight) {
+          triggerAirHockeyGoal(1);
+          return;
+        } else {
+          p.y = 4 + p.radius;
+          p.vy = -p.vy * 0.85;
+        }
+      }
+
+      if (p.y + p.radius >= h - 4) {
+        if (p.x >= goalLeft && p.x <= goalRight) {
+          triggerAirHockeyGoal(2);
+          return;
+        } else {
+          p.y = h - 4 - p.radius;
+          p.vy = -p.vy * 0.85;
+        }
+      }
+
+      handlePaddlePuckCollision(ahState.player, p, true);
+      handlePaddlePuckCollision(ahState.opponent, p, false);
+    }
+
+    function handlePaddlePuckCollision(paddle, puck, isPlayer) {
+      const dx = puck.x - paddle.x;
+      const dy = puck.y - paddle.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = paddle.radius + puck.radius;
+
+      if (dist < minDist && dist > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        puck.x = paddle.x + nx * (minDist + 1);
+        puck.y = paddle.y + ny * (minDist + 1);
+
+        const relVx = puck.vx;
+        const relVy = puck.vy;
+        const dot = relVx * nx + relVy * ny;
+
+        if (dot < 0) {
+          puck.vx -= 1.85 * dot * nx;
+          puck.vy -= 1.85 * dot * ny;
+        }
+
+        puck.vx += nx * 2.2;
+        puck.vy += ny * 2.2;
+
+        createHeartsParticles(puck.x, puck.y, 4);
+      }
+    }
+
+    function triggerAirHockeyGoal(winnerId) {
+      ahState.isPausedForGoal = true;
+      ahState.puck.vx = 0;
+      ahState.puck.vy = 0;
+
+      if (winnerId === 1) {
+        ahState.score1++;
+        showBannerToast("GOOOOL DO SEU GATINHO!! 🐱🎉");
+        createHeartsParticles(ahCanvas.width / 2, 40, 15);
+      } else {
+        ahState.score2++;
+        showBannerToast("Gol adversário! Defenda sua rede! 🐾");
+        createHeartsParticles(ahCanvas.width / 2, ahCanvas.height - 40, 10);
+      }
+
+      updateAirHockeyScoreboard();
+
+      if (ahState.score1 >= ahState.maxScore || ahState.score2 >= ahState.maxScore) {
+        setTimeout(finishAirHockeyGame, 900);
+      } else {
+        setTimeout(() => {
+          resetPuckToCenter(winnerId === 1);
+          ahState.isPausedForGoal = false;
+        }, 1200);
+      }
+    }
+
+    function finishAirHockeyGame() {
+      airHockeyRunning = false;
+      const won = ahState.score1 > ahState.score2;
+      const pawsReward = won ? 10 : 4;
+
+      window.getMyWallet().paws += pawsReward;
+      window.sharedState.loveScore = Math.min(100, window.sharedState.loveScore + 2);
+      window.saveStateToCloud();
+
+      const overlay = document.getElementById('airhockey-overlay');
+      const title = document.getElementById('airhockey-overlay-title');
+      const msg = document.getElementById('airhockey-overlay-msg');
+
+      if (overlay) overlay.classList.remove('hidden');
+      if (title) title.innerText = won ? "VITÓRIA FELINA! 🏆" : "Bela Partida! 🐾";
+      if (msg) msg.innerText = `Placar final: ${ahState.score1} x ${ahState.score2}. Vocês faturaram +${pawsReward} Patinhas 🐾 salvas na nuvem!`;
+
+      createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 20);
+    }
+
+    function handleAirHockeyOnlineSync() {
+      const now = Date.now();
+      const myRole = window.sharedState.myRole || 'cat1';
+      const w = ahCanvas.width;
+      const h = ahCanvas.height;
+
+      if (!window.sharedState.airhockey) window.sharedState.airhockey = {};
+      const ahShared = window.sharedState.airhockey;
+
+      if (myRole === 'cat1') {
+        ahShared.p1X = ahState.player.x / w;
+        ahShared.p1Y = ahState.player.y / h;
+        ahShared.puckX = ahState.puck.x / w;
+        ahShared.puckY = ahState.puck.y / h;
+        ahShared.puckVx = ahState.puck.vx;
+        ahShared.puckVy = ahState.puck.vy;
+        ahShared.score1 = ahState.score1;
+        ahShared.score2 = ahState.score2;
+
+        if (ahShared.p2X !== undefined) {
+          ahState.opponent.x += (ahShared.p2X * w - ahState.opponent.x) * 0.35;
+          ahState.opponent.y += (ahShared.p2Y * h - ahState.opponent.y) * 0.35;
+        }
+      } else {
+        ahShared.p2X = ahState.player.x / w;
+        ahShared.p2Y = (h - ahState.player.y) / h;
+
+        if (ahShared.p1X !== undefined) {
+          ahState.opponent.x += (ahShared.p1X * w - ahState.opponent.x) * 0.35;
+          ahState.opponent.y += ((1 - ahShared.p1Y) * h - ahState.opponent.y) * 0.35;
+        }
+        if (ahShared.puckX !== undefined) {
+          ahState.puck.x += (ahShared.puckX * w - ahState.puck.x) * 0.4;
+          ahState.puck.y += ((1 - ahShared.puckY) * h - ahState.puck.y) * 0.4;
+        }
+      }
+
+      if (now - ahState.lastOnlineSyncTime > 1200) {
+        ahState.lastOnlineSyncTime = now;
+        window.saveStateToCloud();
+      }
+    }
+
+    function drawAirHockeyFrame() {
+      if (!ahCtx || !ahCanvas) return;
+      const ctx = ahCtx;
+      const w = ahCanvas.width;
+      const h = ahCanvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#dbeafe');
+      grad.addColorStop(0.5, '#f0f9ff');
+      grad.addColorStop(1, '#dbeafe');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#2d2724';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, 2, w - 4, h - 4);
+
+      ctx.beginPath();
+      ctx.setLineDash([6, 6]);
+      ctx.moveTo(4, h / 2);
+      ctx.lineTo(w - 4, h / 2);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, 38, 0, Math.PI * 2);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const gw = ahState.goalWidth;
+      const gx = (w - gw) / 2;
+
+      ctx.fillStyle = '#fee2e2';
+      ctx.fillRect(gx, 2, gw, 10);
+      ctx.strokeRect(gx, 2, gw, 10);
+
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(gx, h - 12, gw, 10);
+      ctx.strokeRect(gx, h - 12, gw, 10);
+
+      const puck = ahState.puck;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ef4444';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#2d2724';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🐾', puck.x, puck.y);
+      ctx.restore();
+
+      const opp = ahState.opponent;
+      drawPaddle(ctx, opp.x, opp.y, opp.radius, '#f43f5e', '#ffe4e6', '🐱');
+
+      const pl = ahState.player;
+      drawPaddle(ctx, pl.x, pl.y, pl.radius, '#f59e0b', '#fef3c7', '🐾');
+    }
+
+    function drawPaddle(ctx, x, y, r, mainColor, innerColor, emojiIcon) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y + 2, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(45, 39, 36, 0.15)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = mainColor;
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#2d2724';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = innerColor;
+      ctx.fill();
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emojiIcon, x, y);
+      ctx.restore();
+    }
+
+    function startQuickNoveloGame() {
+      let count = 0;
+      const interval = setInterval(() => {
+        if (count >= 5) {
+          clearInterval(interval);
+          window.getMyWallet().paws += 8;
+          window.saveStateToCloud();
+          showBannerToast("Você pegou os novelos e ganhou +8 🐾 Patinhas salvas na nuvem!");
+          return;
+        }
+
+        const ball = document.createElement('div');
+        ball.innerText = '🧶';
+        ball.style.position = 'fixed';
+        ball.style.fontSize = '2.5rem';
+        ball.style.zIndex = '999';
+        ball.style.left = `${Math.random() * 70 + 15}%`;
+        ball.style.top = `${Math.random() * 60 + 20}%`;
+        ball.style.cursor = 'pointer';
+        ball.className = 'animate-bounce';
+
+        ball.onclick = () => {
+          createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 4);
+          ball.remove();
+        };
+
+        document.body.appendChild(ball);
+        count++;
+        setTimeout(() => ball.remove(), 900);
+      }, 700);
+    }
+    window.startQuickNoveloGame = startQuickNoveloGame;
+
+    /* 7. RENDERIZAÇÃO GERAL */
+    function renderFullState() {
+      const state = window.sharedState;
+
+      const cat1Mount = document.getElementById('cat1-svg-mount');
+      if (cat1Mount) {
+        cat1Mount.innerHTML = generateCatSvg({
+          breed: state.cat1.breed,
+          accessory: state.cat1.accessory,
+          accessoryColor: state.cat1.accessoryColor || '#e76f51',
+          expression: state.cat1.expression,
+          eyeShape: state.cat1.eyeShape || 'almond',
+          eyeColor: state.cat1.eyeColor || '#2b2725',
+          pupil: state.cat1.pupil || 'round',
+          pupilColor: state.cat1.pupilColor || '#ffffff',
+          mouth: state.cat1.mouth || 'cat',
+          isFlipped: false
+        });
+      }
+
+      const cat2Mount = document.getElementById('cat2-svg-mount');
+      if (cat2Mount) {
+        cat2Mount.innerHTML = generateCatSvg({
+          breed: state.cat2.breed,
+          accessory: state.cat2.accessory,
+          accessoryColor: state.cat2.accessoryColor || '#f4a261',
+          expression: state.cat2.expression,
+          eyeShape: state.cat2.eyeShape || 'almond',
+          eyeColor: state.cat2.eyeColor || '#2b2725',
+          pupil: state.cat2.pupil || 'round',
+          pupilColor: state.cat2.pupilColor || '#ffffff',
+          mouth: state.cat2.mouth || 'cat',
+          isFlipped: true
+        });
+      }
+
+      // Regra: cada gatinho só mostra as mensagens que RECEBEU de cartas
+      const letters = state.letters || [];
+      const lastCat1Received = [...letters].reverse().find(l => l.from === 'cat2');
+      const lastCat2Received = [...letters].reverse().find(l => l.from === 'cat1');
+
+      const speech1 = document.getElementById('speech-cat1');
+      if (speech1) {
+        if (lastCat1Received) {
+          speech1.innerText = `💌 "${lastCat1Received.text}"`;
+        } else {
+          speech1.innerText = state.cat1.speech || 'Ronronando baixinho... 🐾';
+        }
+      }
+
+      const speech2 = document.getElementById('speech-cat2');
+      if (speech2) {
+        if (lastCat2Received) {
+          speech2.innerText = `💌 "${lastCat2Received.text}"`;
+        } else {
+          speech2.innerText = state.cat2.speech || 'Esperando você chegar... 💖';
+        }
+      }
+
+      const bH1 = document.getElementById('cat1-hunger-bar');
+      if (bH1) bH1.style.width = `${state.cat1.hunger}%`;
+      const bE1 = document.getElementById('cat1-energy-bar');
+      if (bE1) bE1.style.width = `${state.cat1.energy}%`;
+      const bJ1 = document.getElementById('cat1-happy-bar');
+      if (bJ1) bJ1.style.width = `${state.cat1.happiness}%`;
+
+      const bH2 = document.getElementById('cat2-hunger-bar');
+      if (bH2) bH2.style.width = `${state.cat2.hunger}%`;
+      const bE2 = document.getElementById('cat2-energy-bar');
+      if (bE2) bE2.style.width = `${state.cat2.energy}%`;
+      const bJ2 = document.getElementById('cat2-happy-bar');
+      if (bJ2) bJ2.style.width = `${state.cat2.happiness}%`;
+
+      const loveTxt = document.getElementById('love-percent-text');
+      if (loveTxt) loveTxt.innerText = `${state.loveScore}%`;
+      const loveBar = document.getElementById('love-progress-bar');
+      if (loveBar) loveBar.style.width = `${state.loveScore}%`;
+
+      const isMeCat1 = state.myRole === 'cat1';
+      const myNick = (state.nicknames && state.nicknames[state.myRole]) || (isMeCat1 ? 'Gatinho 1' : 'Gatinha 2');
+      const partnerRole = isMeCat1 ? 'cat2' : 'cat1';
+      const partnerNick = (state.nicknames && state.nicknames[partnerRole]) || (isMeCat1 ? 'Gatinha 2' : 'Gatinho 1');
+
+      const cat1Title = document.getElementById('cat1-title-label');
+      if (cat1Title) cat1Title.innerText = isMeCat1 ? myNick : partnerNick;
+      const cat2Title = document.getElementById('cat2-title-label');
+      if (cat2Title) cat2Title.innerText = isMeCat1 ? partnerNick : myNick;
+
+      const myRoleLabel = document.getElementById('header-my-role-label');
+      if (myRoleLabel) myRoleLabel.innerText = `${myNick} (Você)`;
+
+      const cat1Tag = document.getElementById('cat1-tag-role');
+      if (cat1Tag) cat1Tag.innerText = isMeCat1 ? '(Você)' : '(Amor)';
+      const cat2Tag = document.getElementById('cat2-tag-role');
+      if (cat2Tag) cat2Tag.innerText = !isMeCat1 ? '(Você)' : '(Amor)';
+
+      const pill = document.getElementById('letters-count-pill');
+      if (pill) {
+        const count = (state.letters && state.letters.length) || 0;
+        pill.innerText = count;
+      }
+
+      setupDropTargets();
+      checkStreakProgress();
+      updateWalletHeader();
+    }
+    window.renderFullState = renderFullState;
+
+    function showBannerToast(text) {
+      const banner = document.getElementById('interaction-banner');
+      const textElem = document.getElementById('interaction-banner-text');
+      textElem.innerText = text;
+      banner.classList.remove('opacity-0');
+      clearTimeout(window._bannerTimer);
+      window._bannerTimer = setTimeout(() => {
+        banner.classList.add('opacity-0');
+      }, 2600);
+    }
+    window.showBannerToast = showBannerToast;
+
+    function handleCatPet(targetCat, event) {
+      if (event) {
+        createHeartsParticles(event.clientX, event.clientY, 8);
+      }
+      const cat = window.sharedState[targetCat];
+      cat.happiness = Math.min(100, cat.happiness + 5);
+      cat.expression = 'pet';
+      window.sharedState.loveScore = Math.min(100, window.sharedState.loveScore + 1);
+
+      showBannerToast(`${targetCat === 'cat1' ? 'Gatinho 1' : 'Gatinho 2'} adorou o carinho! 😻`);
+      window.saveStateToCloud();
+
+      setTimeout(() => {
+        window.sharedState[targetCat].expression = 'happy';
+        window.saveStateToCloud();
+      }, 1000);
+    }
+
+    /* =========================================================
+       8. SISTEMA DE CARTINHAS & MENSAGENS AO VIVO
+    ========================================================= */
+    function openLetterModal() {
+      closeFloatingChat();
+      const modal = document.getElementById('letter-modal');
+      if (modal) modal.classList.remove('hidden');
+      renderLetterHistory();
+      setTimeout(() => {
+        const input = document.getElementById('chat-input-text');
+        if (input) input.focus();
+        scrollChatToBottom();
+      }, 80);
+    }
+    window.openLetterModal = openLetterModal;
+
+    function closeLetterModal() {
+      const modal = document.getElementById('letter-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+    window.closeLetterModal = closeLetterModal;
+
+    function toggleFloatingChat() {
+      const container = document.getElementById('floating-chat-container');
+      if (!container) return;
+      if (container.classList.contains('hidden')) {
+        closeLetterModal();
+        container.classList.remove('hidden');
+        updateFloatingPreviewText();
+        const input = document.getElementById('floating-chat-input');
+        if (input) input.focus();
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+    window.toggleFloatingChat = toggleFloatingChat;
+
+    function closeFloatingChat() {
+      const container = document.getElementById('floating-chat-container');
+      if (container) container.classList.add('hidden');
+    }
+    window.closeFloatingChat = closeFloatingChat;
+
+    function switchToFloatingChat() {
+      closeLetterModal();
+      toggleFloatingChat();
+    }
+    window.switchToFloatingChat = switchToFloatingChat;
+
+    function updateFloatingPreviewText() {
+      const prevBox = document.getElementById('floating-recent-bubble');
+      if (!prevBox) return;
+      const letters = window.sharedState.letters || [];
+      if (letters.length === 0) {
+        prevBox.innerText = "Nenhuma cartinha ainda. Seja o primeiro a escrever!";
+        return;
+      }
+      const last = letters[letters.length - 1];
+      const isMe = last.from === (window.sharedState.myRole || 'cat1');
+      prevBox.innerText = `${isMe ? 'Você enviou:' : 'Seu amor enviou:'} "${last.text}"`;
+    }
+    window.updateFloatingPreviewText = updateFloatingPreviewText;
+
+    function insertQuickMessage(text) {
+      const input = document.getElementById('chat-input-text');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+    window.insertQuickMessage = insertQuickMessage;
+
+    function insertQuickMessageFloating(text) {
+      const input = document.getElementById('floating-chat-input');
+      if (input) {
+        input.value = text;
+        input.focus();
+      }
+    }
+    window.insertQuickMessageFloating = insertQuickMessageFloating;
+
+    function scrollChatToBottom() {
+      const container = document.getElementById('chat-messages-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+
+    function renderLetterHistory() {
+      const container = document.getElementById('chat-messages-container');
+      if (!container) return;
+
+      const letters = window.sharedState.letters || [];
+      const myRole = window.sharedState.myRole || 'cat1';
+      const myNick = (window.sharedState.nicknames && window.sharedState.nicknames[myRole]) || (myRole === 'cat1' ? 'Gatinho 1' : 'Gatinha 2');
+      const partnerRole = myRole === 'cat1' ? 'cat2' : 'cat1';
+      const partnerNick = (window.sharedState.nicknames && window.sharedState.nicknames[partnerRole]) || (myRole === 'cat1' ? 'Gatinha 2' : 'Gatinho 1');
+
+      if (letters.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-6 text-pencil/50 space-y-2">
+            <span class="text-5xl animate-bounce">💌</span>
+            <p class="font-caveat text-xl font-bold text-pencil/70">Nenhuma cartinha ainda!</p>
+            <p class="text-xs max-w-xs">Envie a primeira mensagem para o seu amor logo abaixo. Ela fica salva no histórico e aparece na cabeça do gatinho dele(a)!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+      letters.forEach((letter) => {
+        const isMe = letter.from === myRole;
+        const authorName = isMe ? `${myNick} (Você)` : partnerNick;
+        const authorAvatar = letter.from === 'cat1' ? '🐱' : '🌸';
+
+        const row = document.createElement('div');
+        row.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1 w-full`;
+
+        row.innerHTML = `
+          <div class="flex items-end gap-1.5 max-w-[85%] sm:max-w-[75%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+            <div class="w-7 h-7 rounded-full border border-pencil flex items-center justify-center text-xs flex-shrink-0 bg-white shadow-sm" title="${authorName}">
+              ${authorAvatar}
+            </div>
+            
+            <div class="p-3 rounded-2xl border-2 border-pencil text-xs sm:text-sm font-hand leading-relaxed shadow-sm relative ${
+              isMe 
+                ? 'bg-[#ffe8d6] text-amber-950 rounded-br-none' 
+                : 'bg-white text-pencil rounded-bl-none'
+            }">
+              <div class="flex items-center justify-between gap-3 text-[10px] font-bold pb-1 border-b border-pencil/15 opacity-75 font-sans">
+                <span>${authorName}</span>
+                <span>${letter.time || 'Agora'}</span>
+              </div>
+              <p class="pt-1.5 text-pencil text-sm sm:text-base whitespace-pre-wrap select-text">${escapeHtml(letter.text)}</p>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      scrollChatToBottom();
+      updateFloatingPreviewText();
+    }
+    window.renderLetterHistory = renderLetterHistory;
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+
+    function processLetterSend(text) {
+      const myRole = window.sharedState.myRole || 'cat1';
+      const partner = myRole === 'cat1' ? 'cat2' : 'cat1';
+      
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} • ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      const newLetter = {
+        id: Date.now(),
+        from: myRole,
+        text: text,
+        time: timeStr
+      };
+
+      if (!window.sharedState.letters) window.sharedState.letters = [];
+      window.sharedState.letters.push(newLetter);
+
+      // APENAS quem RECEBEU exibe a mensagem na cabeça!
+      window.sharedState[partner].speech = `💌 "${text}"`;
+
+      window.sharedState.loveScore = Math.min(100, window.sharedState.loveScore + 3);
+
+      renderLetterHistory();
+      window.renderFullState();
+      window.saveStateToCloud();
+      updateFloatingPreviewText();
+
+      createHeartsParticles(window.innerWidth / 2, window.innerHeight / 2, 16);
+      showBannerToast("Sua cartinha chegou no gatinho do seu amor! 💌🐾");
+    }
+
+    function sendLoveLetter() {
+      const input = document.getElementById('chat-input-text');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+      processLetterSend(text);
+      input.value = '';
+    }
+    window.sendLoveLetter = sendLoveLetter;
+
+    function sendLoveLetterFromFloating() {
+      const input = document.getElementById('floating-chat-input');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+      processLetterSend(text);
+      input.value = '';
+    }
+    window.sendLoveLetterFromFloating = sendLoveLetterFromFloating;
+
+    function clearLetterHistoryConfirm() {
+      if (confirm("Deseja mesmo limpar as mensagens antigas do chat do casal?")) {
+        window.sharedState.letters = [];
+        window.saveStateToCloud();
+        renderLetterHistory();
+        window.renderFullState();
+        updateFloatingPreviewText();
+        showBannerToast("Histórico de cartas limpo! 🐾");
+      }
+    }
+    window.clearLetterHistoryConfirm = clearLetterHistoryConfirm;
+
+    /* CANVAS DE PARTÍCULAS */
+    const canvas = document.getElementById('fx-canvas');
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function createHeartsParticles(x, y, count = 8) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x + (Math.random() * 40 - 20),
+          y: y + (Math.random() * 20 - 10),
+          vx: Math.random() * 2 - 1,
+          vy: -(Math.random() * 2.5 + 1.2),
+          size: Math.random() * 12 + 10,
+          color: ['#e76f51', '#f4a261', '#e63946', '#e07a5f'][Math.floor(Math.random() * 4)],
+          alpha: 1,
+          decay: Math.random() * 0.015 + 0.012
+        });
+      }
+    }
+
+    function renderParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+
+        const topH = p.size * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(0, topH);
+        ctx.bezierCurveTo(0, 0, -p.size/2, 0, -p.size/2, topH);
+        ctx.bezierCurveTo(-p.size/2, (p.size+topH)/2, 0, p.size, 0, p.size);
+        ctx.bezierCurveTo(0, p.size, p.size/2, (p.size+topH)/2, p.size/2, topH);
+        ctx.bezierCurveTo(p.size/2, 0, 0, 0, 0, topH);
+        ctx.fill();
+        ctx.restore();
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+      requestAnimationFrame(renderParticles);
+    }
+    renderParticles();
+  </script>
+</body>
+</html>
