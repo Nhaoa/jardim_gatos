@@ -141,6 +141,9 @@
         🔒 Sair
       </button>
 
+      <button onclick="enableBrowserNotifications()" id="browser-notifications-btn" class="sketch-btn bg-amber-100 hover:bg-amber-200 px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 text-amber-900" title="Ativar avisos quando chegar uma cartinha">
+        🔔 Avisos
+      </button>
       <button onclick="openLetterModal()" class="sketch-btn bg-rose-100 hover:bg-rose-200 px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 text-rose-800 relative">
         <span>💌 Cartas</span>
         <span id="letters-count-pill" class="bg-rose-500 text-white rounded-full text-[10px] px-1.5 py-0.2 font-black leading-tight ml-0.5">0</span>
@@ -1281,6 +1284,7 @@
 
     const appId = "jardim-dos-gatos-casal";
     const fixedRoomId = "ninho_de_amor_fixo";
+    let firstLettersSnapshot = true;
 
     let savedRole = localStorage.getItem('casal_meu_gatinho') || 'cat1';
     let myDeviceId = localStorage.getItem('casal_device_id');
@@ -1525,6 +1529,15 @@
           if (snapshot.exists()) {
             const data = snapshot.data();
 
+            // Notifica apenas cartas novas recebidas depois da primeira sincronização.
+            const incomingLetters = firstLettersSnapshot
+              ? []
+              : (Array.isArray(data.letters) ? data.letters : []).filter(letter =>
+                  letter && letter.from && letter.from !== (window.sharedState?.myRole || savedRole) &&
+                  !(window.sharedState?.letters || []).some(old => String(old.id) === String(letter.id))
+                );
+            firstLettersSnapshot = false;
+
             window.sharedState = {
               ...window.sharedState,
               ...data,
@@ -1559,6 +1572,9 @@
             if (typeof window.updateWalletHeader === 'function') window.updateWalletHeader();
             if (typeof window.renderLetterHistory === 'function') window.renderLetterHistory();
             if (typeof window.updateFloatingPreviewText === 'function') window.updateFloatingPreviewText();
+            incomingLetters.forEach(letter => {
+              if (typeof window.notifyIncomingLetter === 'function') window.notifyIncomingLetter(letter);
+            });
           } else {
             window.saveStateToCloud(true);
           }
@@ -4881,6 +4897,62 @@
       input.value = '';
     }
     window.sendLoveLetterFromFloating = sendLoveLetterFromFloating;
+
+    // Notificações nativas do navegador: a permissão só é solicitada após clique.
+    window.enableBrowserNotifications = async function() {
+      const btn = document.getElementById('browser-notifications-btn');
+      if (!('Notification' in window)) {
+        showBannerToast('Este navegador não oferece notificações. 💌');
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        if (btn) btn.textContent = '🔔 Avisos ativos';
+        showBannerToast('Avisos do navegador já estão ativos! 💖');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        showBannerToast('Avisos bloqueados. Libere nas configurações do navegador. ⚙️');
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          if (btn) btn.textContent = '🔔 Avisos ativos';
+          showBannerToast('Prontinho! Você será avisado quando chegar uma cartinha. 💌');
+          new Notification('Jardim dos Gatinhos 🐾', {
+            body: 'Notificações ativadas! Você receberá um aviso quando seu amor mandar uma mensagem.',
+            tag: 'gatinhos-notificacoes-ativadas'
+          });
+        } else {
+          showBannerToast('Permissão de notificações não concedida.');
+        }
+      } catch (error) {
+        showBannerToast('Não foi possível ativar as notificações neste navegador.');
+      }
+    };
+
+    window.notifyIncomingLetter = function(letter) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const sender = window.sharedState?.nicknames?.[letter.from] ||
+        (letter.from === 'cat1' ? 'Gatinho 1' : 'Gatinha 2');
+      const notification = new Notification('💌 Nova cartinha — Jardim dos Gatinhos', {
+        body: `${sender} mandou uma mensagem: ${String(letter.text || '').slice(0, 140)}`,
+        tag: `gatinhos-carta-${letter.id}`,
+        renotify: true
+      });
+      notification.onclick = () => {
+        window.focus();
+        if (typeof window.openLetterModal === 'function') window.openLetterModal();
+        notification.close();
+      };
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('browser-notifications-btn');
+      if (btn && 'Notification' in window && Notification.permission === 'granted') {
+        btn.textContent = '🔔 Avisos ativos';
+      }
+    });
 
     function processLetterSend(text) {
       const myRole = window.sharedState.myRole || 'cat1';
