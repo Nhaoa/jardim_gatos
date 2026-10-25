@@ -207,6 +207,9 @@
             <button onclick="fetchTseResults(true)" class="sketch-btn bg-amber-300 hover:bg-amber-400 text-red-950 px-2.5 py-1 rounded-xl text-xs font-bold">
               🔄 Atualizar
             </button>
+            <button onclick="shareLulaResult()" class="sketch-btn bg-pink-200 hover:bg-pink-300 text-red-950 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1" title="Compartilhar o resultado de Lula com os gatinhos">
+              🐱🐾 Compartilhar Lula
+            </button>
           </div>
         </div>
 
@@ -251,7 +254,7 @@
     </div>
 
     <!-- COLUNA DIREITA: CHAT EM TEMPO REAL -->
-    <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col h-[540px] lg:h-auto overflow-hidden">
+    <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col h-[540px] lg:h-[calc(100vh-2rem)] lg:max-h-[900px] lg:min-h-[520px] overflow-hidden self-start sticky top-4">
       <div class="bg-[#f9e8cf] border-b-2 border-pencil p-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-2xl">📻☭</span>
@@ -266,7 +269,7 @@
       </div>
 
       <!-- Mensagens do Chat -->
-      <div id="chat-messages-box" class="flex-1 overflow-y-auto p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]"></div>
+      <div id="chat-messages-box" class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]" style="scrollbar-gutter: stable;"></div>
 
       <!-- Botões de Envio Rápido -->
       <div class="px-3 py-1.5 bg-[#f9e8cf]/60 border-t border-pencil/20 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold">
@@ -408,6 +411,8 @@
     const TSE_ELECTION_CODE = '006258';
     const TSE_CYCLE = 'ele2026';
     let celebrationTriggered = false;
+    let latestTseData = null;
+    let latestTseCargo = '0001';
 
     function onChangeFilter() {
       const cargo = document.getElementById('cargo-select').value;
@@ -436,6 +441,8 @@
     }
 
     function renderTseData(data) {
+      latestTseData = data;
+      latestTseCargo = document.getElementById('cargo-select')?.value || '0001';
       const pst = data.pst || '0,00';
       const pctNum = parseFloat(String(pst).replace(',', '.')) || 0;
 
@@ -513,6 +520,68 @@
         startVictoryCelebration();
       }
     }
+
+    // Compartilha os dados atuais de Lula com uma mensagem temática dos gatinhos.
+    async function shareLulaResult() {
+      const cargo = document.getElementById('cargo-select')?.value || latestTseCargo;
+      if (cargo !== '0001') {
+        alert('Para compartilhar o resultado de Lula, selecione “Presidente (Nacional)” no filtro.');
+        return;
+      }
+
+      const data = latestTseData;
+      const candidates = Array.isArray(data?.cand) ? data.cand : [];
+      const lula = candidates.find(c => String(c.nm || '').toLowerCase().includes('lula'));
+
+      if (!lula) {
+        alert('Ainda não há dados de Lula disponíveis para compartilhar. Aguarde a atualização oficial do TSE e tente novamente.');
+        return;
+      }
+
+      const urnas = data?.pst ? `${data.pst}%` : 'não informado';
+      const votos = Number(lula.vap || 0).toLocaleString('pt-BR');
+      const percentual = lula.pvap ? `${lula.pvap}%` : 'percentual não informado';
+      const situacao = data?.tf === 's' ? 'Totalização finalizada' : 'Apuração em andamento';
+      const eleito = lula.e === 's' ? '\\n🏆 Situação no boletim: eleito' : '';
+      const shareText =
+        `🐱🐾 BOLETIM DOS GATINHOS — RESULTADO DE LULA 🐾🐱\\n\\n` +
+        `Os dois gatinhos da apuração estão acompanhando tudo! 🐈💖\\n` +
+        `🇧🇷 Lula: ${votos} votos (${percentual})\\n` +
+        `🗳️ Urnas apuradas: ${urnas}\\n` +
+        `📊 ${situacao}${eleito}\\n\\n` +
+        `Dados consultados na apuração do TSE. Confira a fonte oficial: https://resultados.tse.jus.br/oficial/app/index.html`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Resultado de Lula — Boletim dos Gatinhos 🐱🐾',
+            text: shareText,
+            url: 'https://resultados.tse.jus.br/oficial/app/index.html'
+          });
+          return;
+        } catch (err) {
+          if (err?.name === 'AbortError') return;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('🐾 Mensagem dos gatinhos copiada! Agora é só colar onde quiser compartilhar.');
+      } catch (err) {
+        const field = document.createElement('textarea');
+        field.value = shareText;
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        alert(copied
+          ? '🐾 Mensagem dos gatinhos copiada! Agora é só colar onde quiser compartilhar.'
+          : 'Não foi possível copiar automaticamente.\\n\\n' + shareText);
+      }
+    }
+    window.shareLulaResult = shareLulaResult;
 
     function renderTseWaitingFallback(cargo, uf) {
       document.getElementById('eleicao-status-txt').innerText = 'A divulgação oficial do 2º turno inicia a partir das 17h (horário de Brasília).';
