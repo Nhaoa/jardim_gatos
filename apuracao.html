@@ -207,8 +207,8 @@
             <button onclick="fetchTseResults(true)" class="sketch-btn bg-amber-300 hover:bg-amber-400 text-red-950 px-2.5 py-1 rounded-xl text-xs font-bold">
               🔄 Atualizar
             </button>
-            <button onclick="shareLulaResult()" class="sketch-btn bg-pink-200 hover:bg-pink-300 text-red-950 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1" title="Compartilhar boletim eleitoral">
-              📤 Compartilhar resultado
+            <button onclick="shareLulaResult()" class="sketch-btn bg-pink-200 hover:bg-pink-300 text-red-950 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1" title="Compartilhar o resultado de Lula com os gatinhos">
+              🐱🐾 Compartilhar Lula
             </button>
           </div>
         </div>
@@ -525,7 +525,7 @@
     async function shareLulaResult() {
       const cargo = document.getElementById('cargo-select')?.value || latestTseCargo;
       if (cargo !== '0001') {
-        alert('Para compartilhar este boletim, selecione “Presidente (Nacional)” no filtro.');
+        alert('Para compartilhar o resultado de Lula, selecione “Presidente (Nacional)” no filtro.');
         return;
       }
 
@@ -534,7 +534,7 @@
       const lula = candidates.find(c => String(c.nm || '').toLowerCase().includes('lula'));
 
       if (!lula) {
-        alert('Os dados eleitorais ainda não estão disponíveis para compartilhamento. Aguarde a próxima atualização oficial do TSE e tente novamente.');
+        alert('Ainda não há dados de Lula disponíveis para compartilhar. Aguarde a atualização oficial do TSE e tente novamente.');
         return;
       }
 
@@ -544,20 +544,17 @@
       const situacao = data?.tf === 's' ? 'Totalização finalizada' : 'Apuração em andamento';
       const eleito = lula.e === 's' ? '\\n🏆 Situação no boletim: eleito' : '';
       const shareText =
-        `BOLETIM DE ACOMPANHAMENTO ELEITORAL\n` +
-        `Presidência da República — Brasil\n\n` +
-        `🐱 A equipe dos gatinhos apresenta os dados mais recentes disponíveis na apuração oficial.\n\n` +
-        `Candidato: Luiz Inácio Lula da Silva\n` +
-        `Votos recebidos: ${votos} (${percentual})\n` +
-        `Seções totalizadas: ${urnas}\n` +
-        `Situação da totalização: ${situacao}${eleito}\n\n` +
-        `Fonte: Tribunal Superior Eleitoral (TSE)\n` +
-        `Consulte os dados oficiais: https://resultados.tse.jus.br/oficial/app/index.html`;
+        `🐱🐾 BOLETIM DOS GATINHOS — RESULTADO DE LULA 🐾🐱\\n\\n` +
+        `Os dois gatinhos da apuração estão acompanhando tudo! 🐈💖\\n` +
+        `🇧🇷 Lula: ${votos} votos (${percentual})\\n` +
+        `🗳️ Urnas apuradas: ${urnas}\\n` +
+        `📊 ${situacao}${eleito}\\n\\n` +
+        `Dados consultados na apuração do TSE. Confira a fonte oficial: https://resultados.tse.jus.br/oficial/app/index.html`;
 
       if (navigator.share) {
         try {
           await navigator.share({
-            title: 'Boletim de acompanhamento eleitoral — Presidência da República',
+            title: 'Resultado de Lula — Boletim dos Gatinhos 🐱🐾',
             text: shareText,
             url: 'https://resultados.tse.jus.br/oficial/app/index.html'
           });
@@ -569,7 +566,7 @@
 
       try {
         await navigator.clipboard.writeText(shareText);
-        alert('Boletim copiado. Você já pode colá-lo no aplicativo ou canal em que deseja compartilhar.');
+        alert('🐾 Mensagem dos gatinhos copiada! Agora é só colar onde quiser compartilhar.');
       } catch (err) {
         const field = document.createElement('textarea');
         field.value = shareText;
@@ -580,7 +577,7 @@
         const copied = document.execCommand('copy');
         field.remove();
         alert(copied
-          ? 'Boletim copiado. Você já pode colá-lo no aplicativo ou canal em que deseja compartilhar.'
+          ? '🐾 Mensagem dos gatinhos copiada! Agora é só colar onde quiser compartilhar.'
           : 'Não foi possível copiar automaticamente.\\n\\n' + shareText);
       }
     }
