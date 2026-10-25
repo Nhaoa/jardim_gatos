@@ -297,6 +297,41 @@
 
   </main>
 
+
+  <!-- 5. PAINEL REGIONAL E EVOLUÇÃO DA APURAÇÃO -->
+  <section id="regional-dashboard" class="w-full max-w-6xl mt-4 space-y-4 z-10">
+    <section class="bg-[#f0eee8] rounded-3xl border-[3px] border-[#292929] p-3 sm:p-4 text-[#202024]">
+      <div class="flex flex-wrap justify-between items-center gap-2 border-b border-stone-300 pb-3 mb-3">
+        <h2 class="font-bold tracking-widest text-sm sm:text-base uppercase">2º turno · Região por região</h2>
+        <span id="regional-update-time" class="font-mono text-xs sm:text-sm text-stone-600">Aguardando dados do TSE…</span>
+      </div>
+      <div id="regional-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="bg-white rounded-2xl p-4 text-sm text-stone-500">Carregando resultados regionais…</div>
+      </div>
+      <p id="regional-note" class="text-sm sm:text-base text-stone-600 mt-3">Os percentuais serão calculados a partir dos votos válidos agregados dos estados de cada região.</p>
+      <div class="border-t border-stone-300 mt-4 pt-3 text-xs sm:text-sm text-stone-600">
+        Fonte: arquivos de resultados do TSE. Os dados regionais só aparecem quando a API oficial disponibiliza os resultados correspondentes.
+      </div>
+    </section>
+
+    <section class="bg-white rounded-3xl border-[3px] border-[#292929] p-4 sm:p-5 text-[#202024]">
+      <div class="flex flex-wrap justify-between items-center gap-2 border-b border-stone-200 pb-3 mb-3">
+        <h2 class="font-bold tracking-widest text-sm sm:text-base uppercase">2º turno · A noite da apuração</h2>
+        <span id="regional-chart-time" class="font-mono text-xs sm:text-sm text-stone-600">Aguardando histórico</span>
+      </div>
+      <div class="flex gap-5 text-sm font-semibold text-stone-600 mb-2">
+        <span class="inline-flex items-center gap-2"><i class="inline-block w-6 h-1 rounded bg-rose-700"></i><span id="regional-lula-legend">Lula</span></span>
+        <span class="inline-flex items-center gap-2"><i class="inline-block w-6 h-1 rounded bg-blue-700"></i><span id="regional-flavio-legend">Flávio</span></span>
+      </div>
+      <div class="w-full overflow-hidden">
+        <svg id="regional-history-chart" viewBox="0 0 900 310" role="img" aria-label="Gráfico da evolução percentual dos candidatos durante a apuração" class="w-full h-auto" style="min-height:220px"></svg>
+      </div>
+      <div class="border-t border-stone-200 mt-3 pt-3 text-xs sm:text-sm text-stone-600">
+        Fonte: TSE. Percentual sobre votos válidos; cada ponto representa uma atualização registrada nesta página. A linha cinza marca 50%. O eixo horizontal representa a porcentagem nacional de seções apuradas.
+      </div>
+    </section>
+  </section>
+
   <!-- 1. GERADOR SVG DOS GATOS -->
   <script>
     function generateCatSvg(options = {}) {
@@ -665,6 +700,179 @@
     }
 
     setInterval(() => fetchTseResults(false), 30000);
+  </script>
+
+
+  <!-- 6. AGREGAÇÃO REGIONAL E GRÁFICO HISTÓRICO -->
+  <script>
+    const REGIONALS = [
+      { name: 'Norte', states: ['ac','ap','am','pa','ro','rr','to'] },
+      { name: 'Nordeste', states: ['al','ba','ce','ma','pb','pe','pi','rn','se'] },
+      { name: 'Centro-Oeste', states: ['df','go','mt','ms'] },
+      { name: 'Sudeste', states: ['es','mg','rj','sp'] },
+      { name: 'Sul', states: ['pr','rs','sc'] },
+      { name: 'Exterior', states: ['zz'] }
+    ];
+    const REGIONAL_STATE_NAMES = {
+      ac:'Acre', al:'Alagoas', am:'Amazonas', ap:'Amapá', ba:'Bahia', ce:'Ceará',
+      df:'Distrito Federal', es:'Espírito Santo', go:'Goiás', ma:'Maranhão',
+      mg:'Minas Gerais', ms:'Mato Grosso do Sul', mt:'Mato Grosso', pa:'Pará',
+      pb:'Paraíba', pe:'Pernambuco', pi:'Piauí', pr:'Paraná', rj:'Rio de Janeiro',
+      rn:'Rio Grande do Norte', ro:'Rondônia', rr:'Roraima', rs:'Rio Grande do Sul',
+      sc:'Santa Catarina', se:'Sergipe', sp:'São Paulo', to:'Tocantins', zz:'Exterior'
+    };
+    const regionalHistory = [];
+    let regionalFetchBusy = false;
+
+    function parseTseNumber(value) {
+      if (typeof value === 'number') return value;
+      const s = String(value ?? '0').trim().replace(/\./g, '').replace(',', '.').replace('%','');
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function formatRegionalNumber(n) {
+      return Math.round(n || 0).toLocaleString('pt-BR');
+    }
+    function candidateMatches(c, terms) {
+      const hay = `${c?.nm || ''} ${c?.nmu || ''} ${c?.cc || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+      return terms.some(term => hay.includes(term));
+    }
+    function findRegionalCandidate(candidates, terms) {
+      return candidates.find(c => candidateMatches(c, terms)) || null;
+    }
+    function normalizeRegionalRaw(raw) {
+      if (typeof normalizeTseData === 'function') return normalizeTseData(raw);
+      return raw || {};
+    }
+    async function fetchOneState(uf) {
+      const code = TSE_FEDERAL_ELECTION_CODE;
+      const fileCode = code.padStart(6, '0');
+      const url = `https://resultados.tse.jus.br/oficial/${TSE_CYCLE}/${code}/dados/${uf}/c0001-e${fileCode}-u.json`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status} (${uf})`);
+      return normalizeRegionalRaw(await response.json());
+    }
+    function regionalVotes(data, terms) {
+      const candidates = Array.isArray(data?.cand) ? data.cand : [];
+      const candidate = findRegionalCandidate(candidates, terms);
+      const votes = parseTseNumber(candidate?.vap);
+      const valid = parseTseNumber(data?.vv || data?.v?.vv || data?.v?.vvc);
+      const pctSections = parseTseNumber(data?.pst || data?.s?.pst || data?.s?.psa);
+      return { votes, valid, pctSections, candidate };
+    }
+    function renderRegionalCards(results) {
+      const root = document.getElementById('regional-cards');
+      if (!root) return;
+      root.innerHTML = '';
+      results.forEach(region => {
+        const lulaPct = region.valid ? 100 * region.lulaVotes / region.valid : null;
+        const flavioPct = region.valid ? 100 * region.flavioVotes / region.valid : null;
+        const totalPct = region.valid ? Math.min(100, 100 * region.valid / Math.max(region.valid, region.valid)) : 0;
+        const progress = Math.max(0, Math.min(100, region.sectionsPct || 0));
+        const unavailable = !region.valid;
+        const card = document.createElement('article');
+        card.className = 'bg-white rounded-2xl p-3 sm:p-3.5 flex flex-col min-w-0';
+        card.innerHTML = `
+          <h3 class="font-black uppercase leading-tight text-xl sm:text-2xl tracking-tight">${region.name}</h3>
+          <p class="text-sm font-semibold text-stone-600 mt-1">${unavailable ? 'Dados indisponíveis' : `${(region.sectionsPct || 0).toLocaleString('pt-BR',{maximumFractionDigits:2})}% apurado`}</p>
+          <div class="h-1.5 bg-stone-200 rounded-full overflow-hidden mt-2 mb-3"><div class="h-full bg-stone-800" style="width:${progress}%"></div></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="block text-xs font-semibold text-rose-700">Lula</span><strong class="block text-3xl leading-none text-rose-700">${lulaPct == null ? '—' : lulaPct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}</strong></div>
+            <div class="text-right"><span class="block text-xs font-semibold text-blue-700">Flávio</span><strong class="block text-3xl leading-none text-blue-700">${flavioPct == null ? '—' : flavioPct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}</strong></div>
+          </div>
+          <div class="flex h-2 rounded-full overflow-hidden bg-stone-200 mt-2"><span class="bg-rose-700" style="width:${lulaPct == null ? 0 : lulaPct}%"></span><span class="bg-blue-700" style="width:${flavioPct == null ? 0 : flavioPct}%"></span></div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-bold text-stone-600 mt-2"><span>${formatRegionalNumber(region.lulaVotes)}</span><span class="text-right">${formatRegionalNumber(region.flavioVotes)}</span></div>
+          <div class="border-t border-stone-200 mt-3 pt-2 text-xs text-stone-600">Votos válidos: <b>${formatRegionalNumber(region.valid)}</b></div>
+        `;
+        root.appendChild(card);
+      });
+    }
+    function renderRegionalChart() {
+      const svg = document.getElementById('regional-history-chart');
+      if (!svg) return;
+      const W = 900, H = 310, left = 54, right = 120, top = 22, bottom = 48;
+      const plotW = W - left - right, plotH = H - top - bottom;
+      const hist = regionalHistory.slice(-40);
+      const xMax = Math.max(2, ...hist.map(p => p.sections));
+      const yMin = 35, yMax = 65;
+      const x = v => left + (v / xMax) * plotW;
+      const y = v => top + ((yMax - v) / (yMax - yMin)) * plotH;
+      let out = '';
+      [40,50,60].forEach(v => {
+        out += `<line x1="${left}" y1="${y(v)}" x2="${W-right+12}" y2="${y(v)}" stroke="${v===50?'#a1a1aa':'#e7e5e4'}" stroke-width="${v===50?1.5:1}"/>`;
+        out += `<text x="${left-9}" y="${y(v)+5}" text-anchor="end" font-size="13" fill="#62616b">${v}%</text>`;
+      });
+      [0,0.5,1,1.5,2].forEach(v => {
+        out += `<text x="${x(v)}" y="${H-24}" text-anchor="middle" font-size="12" fill="#62616b">${String(v).replace('.',',')}%</text>`;
+      });
+      out += `<text x="${left+plotW/2}" y="${H-4}" text-anchor="middle" font-size="12" fill="#62616b">seções totalizadas</text>`;
+      if (hist.length) {
+        const lula = hist.map(p => `${x(p.sections)},${y(p.lula)}`).join(' ');
+        const flavio = hist.map(p => `${x(p.sections)},${y(p.flavio)}`).join(' ');
+        out += `<polyline points="${lula}" fill="none" stroke="#be123c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+        out += `<polyline points="${flavio}" fill="none" stroke="#356fa8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+        const last = hist[hist.length-1];
+        out += `<circle cx="${x(last.sections)}" cy="${y(last.lula)}" r="5" fill="#be123c"/><circle cx="${x(last.sections)}" cy="${y(last.flavio)}" r="5" fill="#356fa8"/>`;
+        out += `<text x="${Math.min(W-110,x(last.sections)+8)}" y="${y(last.lula)+4}" font-size="12" font-weight="700" fill="#be123c">Lula ${last.lula.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</text>`;
+        out += `<text x="${Math.min(W-110,x(last.sections)+8)}" y="${y(last.flavio)+4}" font-size="12" font-weight="700" fill="#356fa8">Flávio ${last.flavio.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</text>`;
+      } else {
+        out += `<text x="${left+plotW/2}" y="${top+plotH/2}" text-anchor="middle" font-size="16" fill="#78716c">O gráfico será desenhado após a primeira atualização válida.</text>`;
+      }
+      svg.innerHTML = out;
+    }
+    async function fetchRegionalResults() {
+      if (regionalFetchBusy || document.getElementById('cargo-select')?.value !== '0001') return;
+      regionalFetchBusy = true;
+      const status = document.getElementById('regional-update-time');
+      try {
+        const flatStates = [...new Set(REGIONALS.flatMap(r => r.states))];
+        const settled = await Promise.allSettled(flatStates.map(async uf => ({ uf, data: await fetchOneState(uf) })));
+        const byState = new Map();
+        settled.forEach(item => { if (item.status === 'fulfilled') byState.set(item.value.uf, item.value.data); });
+        const results = REGIONALS.map(region => {
+          let lulaVotes = 0, flavioVotes = 0, valid = 0, sectionsWeighted = 0, sectionWeight = 0;
+          region.states.forEach(uf => {
+            const d = byState.get(uf);
+            if (!d) return;
+            const l = regionalVotes(d, ['lula']);
+            const f = regionalVotes(d, ['flavio']);
+            lulaVotes += l.votes; flavioVotes += f.votes;
+            valid += l.valid;
+            if (l.valid > 0) { sectionsWeighted += l.pctSections * l.valid; sectionWeight += l.valid; }
+          });
+          return { name: region.name, lulaVotes, flavioVotes, valid, sectionsPct: sectionWeight ? sectionsWeighted / sectionWeight : 0 };
+        });
+        renderRegionalCards(results);
+        const national = latestTseData;
+        const nLula = regionalVotes(national || {}, ['lula']);
+        const nFlavio = regionalVotes(national || {}, ['flavio']);
+        const nationalValid = parseTseNumber(national?.vv);
+        if (nationalValid > 0 && nLula.candidate && nFlavio.candidate) {
+          const pctLula = 100*nLula.votes/nationalValid;
+          const pctFlavio = 100*nFlavio.votes/nationalValid;
+          const sections = parseTseNumber(national?.pst);
+          regionalHistory.push({ time: Date.now(), sections, lula: pctLula, flavio: pctFlavio });
+          if (regionalHistory.length > 100) regionalHistory.shift();
+          renderRegionalChart();
+          document.getElementById('regional-chart-time').textContent = `Último ponto: ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+        }
+        if (status) status.textContent = `TSE · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`;
+        const missing = flatStates.length - byState.size;
+        document.getElementById('regional-note').textContent = missing
+          ? `Dados agregados dos arquivos disponíveis do TSE; ${missing} arquivo(s) estadual(is) ainda não responderam ou não estão publicados. Exterior depende da disponibilidade do arquivo “zz”.`
+          : 'Dados agregados dos arquivos estaduais do TSE. Os percentuais são calculados sobre votos válidos; confira a fonte oficial para a metodologia e eventuais revisões.';
+      } catch (error) {
+        console.error('[Painel regional]', error);
+        if (status) status.textContent = 'Falha ao consultar arquivos regionais';
+      } finally {
+        regionalFetchBusy = false;
+      }
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      renderRegionalChart();
+      setTimeout(fetchRegionalResults, 2500);
+      setInterval(fetchRegionalResults, 60000);
+    });
   </script>
 
   <!-- 3. MOTOR DE FOGOS DE ARTIFÍCIO, CONFETES E MÚSICA -->
