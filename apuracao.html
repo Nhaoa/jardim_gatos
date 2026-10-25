@@ -761,7 +761,7 @@
     let db = null;
     let roomRef = null;
 
-    function renderCatsAndChat() {
+function renderCatsAndChat() {
       const nick1 = state.nicknames?.cat1 || 'Camarada 1';
       const nick2 = state.nicknames?.cat2 || 'Camarada 2';
 
@@ -793,17 +793,20 @@
           const div = document.createElement('div');
           div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
           div.innerHTML = `
-            <div class="p-2.5 rounded-2xl border-2 border-pencil text-xs sm:text-sm font-hand max-w-[82%] shadow-sm ${isMe ? 'bg-amber-100 text-red-950' : 'bg-white text-pencil'}">
+            <div class="p-2.5 rounded-2xl border-2 border-pencil text-xs sm:text-sm font-hand max-w-[85%] shadow-sm ${isMe ? 'bg-amber-100 text-red-950' : 'bg-white text-pencil'}">
               <span class="text-[10px] font-sans font-bold block opacity-70">${authorName} • ${l.time || ''}</span>
-              <p class="pt-0.5">${l.text}</p>
+              <p class="pt-0.5 break-words">${l.text}</p>
             </div>
           `;
           box.appendChild(div);
         });
-        box.scrollTop = box.scrollHeight;
+
+        // Executa a rolagem após os elementos serem renderizados na tela
+        requestAnimationFrame(() => {
+          box.scrollTop = box.scrollHeight;
+        });
       }
     }
-
     window.switchRoleQuick = function() {
       myRole = myRole === 'cat1' ? 'cat2' : 'cat1';
       localStorage.setItem('casal_meu_gatinho', myRole);
