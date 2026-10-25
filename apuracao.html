@@ -183,7 +183,7 @@
               <span>📊 Painel de Totalização — 2º Turno</span>
             </h2>
             <p id="tse-last-update" class="text-[11px] text-pencil/70 font-medium">
-              Fonte: API Oficial de Resultados do TSE (Eleição 6258)
+              Fonte: API oficial de resultados do TSE — 2º turno de 2026
             </p>
           </div>
 
@@ -408,7 +408,8 @@
 
   <!-- 2. TOTALIZAÇÃO DO TSE E DETECÇÃO DA VITÓRIA -->
   <script>
-    const TSE_ELECTION_CODE = '006258';
+    const TSE_FEDERAL_ELECTION_CODE = '6258';
+    const TSE_STATE_ELECTION_CODE = '6260';
     const TSE_CYCLE = 'ele2026';
     let celebrationTriggered = false;
     let latestTseData = null;
@@ -428,19 +429,68 @@
       const statusTxt = document.getElementById('eleicao-status-txt');
       if (manual && statusTxt) statusTxt.innerText = 'Consultando dados oficiais do TSE... 🔄';
 
-      const url = `https://resultados.tse.jus.br/oficial/${TSE_CYCLE}/${TSE_ELECTION_CODE}/dados-simplificados/${uf}/${uf}-c${cargo}-e${TSE_ELECTION_CODE}-r.json`;
+      // Em 2026, Presidente usa a eleição federal (6258) e Governador
+      // usa a eleição estadual (6260). O diretório usa o código sem zeros;
+      // o nome do arquivo usa o código com seis dígitos, conforme o padrão TSE.
+      const electionCode = cargo === '0001'
+        ? TSE_FEDERAL_ELECTION_CODE
+        : TSE_STATE_ELECTION_CODE;
+      const electionCodeFile = electionCode.padStart(6, '0');
+      const url = `https://resultados.tse.jus.br/oficial/${TSE_CYCLE}/${electionCode}/dados/${uf}/${uf}-c${cargo}-e${electionCodeFile}-u.json`;
 
       try {
         const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('Dados em processamento');
+        if (!res.ok) throw new Error(`TSE respondeu HTTP ${res.status}`);
         const data = await res.json();
         renderTseData(data);
+        const syncStatus = document.getElementById('sync-status');
+        const syncDot = document.getElementById('sync-dot');
+        if (syncStatus) syncStatus.innerText = 'Dados do TSE atualizados automaticamente';
+        if (syncDot) {
+          syncDot.classList.remove('bg-red-600');
+          syncDot.classList.add('bg-emerald-500');
+        }
       } catch (err) {
-        renderTseWaitingFallback(cargo, uf);
+        console.error('[Apuração TSE] Falha ao consultar:', url, err);
+        renderTseWaitingFallback(cargo, uf, err);
       }
     }
 
-    function renderTseData(data) {
+    // O TSE passou a publicar o resultado unificado EA20 em 2026.
+    // Nesse formato, candidatos ficam dentro de carg/agr/par/cand e os
+    // totais ficam em s (seções) e v (votação), não no nível raiz.
+    function normalizeTseData(raw) {
+      const candidates = [];
+      const walk = (value) => {
+        if (!value) return;
+        if (Array.isArray(value)) { value.forEach(walk); return; }
+        if (typeof value !== 'object') return;
+        if (Array.isArray(value.cand)) value.cand.forEach(c => candidates.push(c));
+        Object.entries(value).forEach(([key, child]) => {
+          if (key !== 'cand' && child && typeof child === 'object') walk(child);
+        });
+      };
+      if (Array.isArray(raw.cand)) raw.cand.forEach(c => candidates.push(c));
+      else walk(raw.carg || []);
+      // Remove duplicatas pelo número de sequência/número de urna/nome.
+      const unique = [...new Map(candidates.map(c => [`${c.seq || ''}-${c.n || ''}-${c.nm || ''}`, c])).values()];
+      const sections = raw.s || {};
+      const votes = raw.v || {};
+      return {
+        ...raw,
+        cand: unique,
+        pst: raw.pst ?? sections.pst ?? sections.psa ?? '0,00',
+        vv: raw.vv ?? votes.vv ?? votes.vvc ?? '0',
+        pvv: raw.pvv ?? votes.pvv ?? votes.pvvc ?? '0,00',
+        vb: raw.vb ?? votes.vb ?? '0',
+        pvb: raw.pvb ?? votes.pvb ?? '0,00',
+        tvn: raw.tvn ?? votes.tvn ?? votes.vn ?? '0',
+        ptvn: raw.ptvn ?? votes.ptvn ?? votes.pvn ?? '0,00'
+      };
+    }
+
+    function renderTseData(rawData) {
+      const data = normalizeTseData(rawData);
       latestTseData = data;
       latestTseCargo = document.getElementById('cargo-select')?.value || '0001';
       const pst = data.pst || '0,00';
@@ -583,22 +633,31 @@
     }
     window.shareLulaResult = shareLulaResult;
 
-    function renderTseWaitingFallback(cargo, uf) {
-      document.getElementById('eleicao-status-txt').innerText = 'A divulgação oficial do 2º turno inicia a partir das 17h (horário de Brasília).';
+    function renderTseWaitingFallback(cargo, uf, error = null) {
+      const status = document.getElementById('eleicao-status-txt');
+      if (status) status.innerText = 'Não foi possível carregar os dados. Tentaremos novamente em 30 segundos.';
+      const syncStatus = document.getElementById('sync-status');
+      const syncDot = document.getElementById('sync-dot');
+      if (syncStatus) syncStatus.innerText = 'Falha ao consultar a API do TSE — tentando novamente';
+      if (syncDot) {
+        syncDot.classList.remove('bg-emerald-500');
+        syncDot.classList.add('bg-red-600');
+      }
       const listEl = document.getElementById('candidates-list');
       listEl.innerHTML = `
         <div class="bg-amber-50 border-2 border-dashed border-red-700 rounded-2xl p-4 text-center space-y-2">
-          <span class="text-3xl block">🗳️⏳</span>
+          <span class="text-3xl block">🗳️⚠️</span>
           <h4 class="font-bold text-xs sm:text-sm text-red-950">
-            Aguardando abertura dos dados pelo TSE (${cargo === '0001' ? 'Presidente - BR' : 'Governador - ' + uf.toUpperCase()})
+            Não foi possível carregar a apuração (${cargo === '0001' ? 'Presidente - Brasil' : 'Governador - ' + uf.toUpperCase()})
           </h4>
           <p class="text-[11px] text-pencil/80 leading-relaxed">
-            A totalização oficial do 2º turno é liberada pelo Tribunal Superior Eleitoral a partir das <b>17h (horário de Brasília)</b>.
+            A página tentará consultar novamente em 30 segundos. Se o erro continuar, confira os dados oficiais do TSE.
           </p>
+          <p class="text-[10px] text-red-800 break-words">${error ? String(error.message || error).replace(/[<>&]/g, '') : 'Erro de consulta ou dados ainda indisponíveis.'}</p>
           <div class="pt-1">
-            <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener noreferrer"
+            <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/br/cargo/1/vis/nominal/resultados" target="_blank" rel="noopener noreferrer"
                class="inline-block sketch-btn bg-red-700 hover:bg-red-800 text-amber-200 text-xs font-bold px-4 py-1.5 rounded-xl">
-              Abrir Resultados TSE Oficial ↗️
+              Conferir resultados oficiais do TSE ↗️
             </a>
           </div>
         </div>
