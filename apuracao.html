@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Apuração 2º Turno 🗳️☭ União dos Camaradas Felinos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -78,7 +78,23 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-2 sm:p-4 overflow-x-hidden relative">
 
-  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-20"></canvas>
+  <!-- Áudio da Comemoração -->
+  <audio id="victory-audio" src="comemoracao.mp3" preload="auto" loop></audio>
+
+  <!-- Canvas de Fogos e Confetes em tela cheia -->
+  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+  <!-- BANNER GIGANTE DE CELEBRAÇÃO (OCULTO ATÉ A VITÓRIA) -->
+  <div id="victory-banner" class="hidden fixed top-4 z-[60] max-w-lg w-[92%] bg-gradient-to-r from-red-600 via-amber-500 to-red-600 border-4 border-yellow-300 p-3 rounded-3xl shadow-2xl text-center sketch-border text-white animate-bounce">
+    <div class="flex items-center justify-center gap-2">
+      <span class="text-3xl">🎆🚩</span>
+      <h2 class="font-caveat text-2xl sm:text-3xl font-extrabold tracking-wide drop-shadow">
+        VITÓRIA PROLETÁRIA CONFIRMADA! ☭💖
+      </h2>
+      <span class="text-3xl">⭐🎉</span>
+    </div>
+    <p class="text-xs font-bold text-amber-100">100% das urnas apuradas! O amor e a união venceram!</p>
+  </div>
 
   <!-- CABEÇALHO -->
   <header class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-3 bg-[#fff8ed] p-3 sm:p-4 rounded-2xl sketch-border z-30 border-t-4 border-t-red-700 mb-3">
@@ -92,12 +108,18 @@
         </h1>
         <p class="text-[11px] sm:text-xs text-pencil/80 font-bold flex items-center gap-1.5">
           <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
-          <span id="sync-status">Conectado ao Satélite Sputnik & Dados TSE</span>
+          <span id="sync-status">Conectado ao Satélite Sputnik & Dados do TSE</span>
         </p>
       </div>
     </div>
 
     <div class="flex items-center gap-2 flex-wrap text-xs font-bold">
+      <!-- Botão para Testar a Comemoração Manualmente -->
+      <button onclick="testVictoryCelebration()" class="sketch-btn bg-yellow-300 hover:bg-yellow-400 px-3 py-1.5 rounded-xl text-red-950 flex items-center gap-1" title="Clique para testar fogos, confetes e som">
+        <span>🎆</span>
+        <span>Testar Fogos & Som</span>
+      </button>
+
       <button onclick="switchRoleQuick()" class="sketch-btn bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl flex items-center gap-1 text-red-950">
         <span>🚩 Você é:</span>
         <span id="my-role-badge" class="text-red-700 font-extrabold">Camarada 1</span>
@@ -116,10 +138,10 @@
   <!-- CONTEÚDO PRINCIPAL: GATINHOS + APURAÇÃO + CHAT -->
   <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 z-10">
 
-    <!-- COLUNA ESQUERDA / CENTRO (7 cols): GATINHOS + PAINEL DE VOTOS -->
+    <!-- COLUNA ESQUERDA / CENTRO: GATINHOS + PAINEL DE VOTOS -->
     <div class="lg:col-span-7 flex flex-col gap-4">
 
-      <!-- PALCO DOS GATINHOS ASSISTINDO À APURAÇÃO -->
+      <!-- PALCO DOS GATINHOS -->
       <section class="bg-[#f3dfc1] rounded-3xl sketch-border p-3 sm:p-4 relative overflow-hidden" style="box-shadow: inset 0 0 35px rgba(185, 28, 28, 0.18), 3px 4px 0 #2b1111;">
         <div class="flex items-center justify-between mb-2 px-1">
           <span class="text-xs font-bold text-red-950 bg-[#fff8ed] px-2.5 py-0.5 rounded-full border border-pencil">
@@ -153,7 +175,7 @@
         </div>
       </section>
 
-      <!-- PAINEL DE APURAÇÃO DO 2º TURNO -->
+      <!-- PAINEL DE APURAÇÃO -->
       <section class="bg-[#fff8ed] rounded-3xl sketch-border p-4 space-y-3 flex-1 flex flex-col justify-between">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-pencil/20 pb-2.5">
           <div>
@@ -165,7 +187,7 @@
             </p>
           </div>
 
-          <!-- Seletores de Cargo e UF -->
+          <!-- Filtros de Cargo e Estado -->
           <div class="flex items-center gap-1.5 flex-wrap">
             <select id="cargo-select" onchange="onChangeFilter()" class="bg-white border-2 border-pencil rounded-xl px-2.5 py-1 text-xs font-bold text-red-950">
               <option value="0001">Presidente (Nacional)</option>
@@ -173,33 +195,13 @@
             </select>
 
             <select id="uf-select" onchange="onChangeFilter()" class="hidden bg-white border-2 border-pencil rounded-xl px-2 py-1 text-xs font-bold text-red-950">
-              <option value="ac">AC</option>
-              <option value="al">AL</option>
-              <option value="am">AM</option>
-              <option value="ap">AP</option>
-              <option value="ba">BA</option>
-              <option value="ce">CE</option>
-              <option value="df">DF</option>
-              <option value="es">ES</option>
-              <option value="go">GO</option>
-              <option value="ma">MA</option>
-              <option value="mg">MG</option>
-              <option value="ms">MS</option>
-              <option value="mt">MT</option>
-              <option value="pa" selected>PA</option>
-              <option value="pb">PB</option>
-              <option value="pe">PE</option>
-              <option value="pi">PI</option>
-              <option value="pr">PR</option>
-              <option value="rj">RJ</option>
-              <option value="rn">RN</option>
-              <option value="ro">RO</option>
-              <option value="rr">RR</option>
-              <option value="rs">RS</option>
-              <option value="sc">SC</option>
-              <option value="se">SE</option>
-              <option value="sp">SP</option>
-              <option value="to">TO</option>
+              <option value="ac">AC</option><option value="al">AL</option><option value="am">AM</option><option value="ap">AP</option>
+              <option value="ba">BA</option><option value="ce">CE</option><option value="df">DF</option><option value="es">ES</option>
+              <option value="go">GO</option><option value="ma">MA</option><option value="mg">MG</option><option value="ms">MS</option>
+              <option value="mt">MT</option><option value="pa" selected>PA</option><option value="pb">PB</option><option value="pe">PE</option>
+              <option value="pi">PI</option><option value="pr">PR</option><option value="rj">RJ</option><option value="rn">RN</option>
+              <option value="ro">RO</option><option value="rr">RR</option><option value="rs">RS</option><option value="sc">SC</option>
+              <option value="se">SE</option><option value="sp">SP</option><option value="to">TO</option>
             </select>
 
             <button onclick="fetchTseResults(true)" class="sketch-btn bg-amber-300 hover:bg-amber-400 text-red-950 px-2.5 py-1 rounded-xl text-xs font-bold">
@@ -208,7 +210,7 @@
           </div>
         </div>
 
-        <!-- Barra de Seções Apuradas -->
+        <!-- Barra de Urnas Apuradas -->
         <div class="bg-amber-50 border-2 border-pencil rounded-2xl p-3 space-y-1.5">
           <div class="flex justify-between items-center text-xs font-bold text-red-950">
             <span>Urnas / Seções Totalizadas:</span>
@@ -223,14 +225,14 @@
           </div>
         </div>
 
-        <!-- Lista de Candidatos -->
+        <!-- Lista de Candidatos com Fotos -->
         <div id="candidates-list" class="space-y-2.5 my-auto py-1">
           <div class="text-center py-6 text-xs text-pencil/70 font-semibold">
             Consultando servidor oficial do TSE... ⏳
           </div>
         </div>
 
-        <!-- Rodapé de Votos Brancos, Nulos e Válidos -->
+        <!-- Rodapé de Votos -->
         <div class="grid grid-cols-3 gap-2 pt-2 border-t border-pencil/20 text-center text-[11px] font-bold">
           <div class="bg-white p-2 rounded-xl border border-pencil">
             <span class="text-pencil/60 block text-[10px]">Votos Válidos</span>
@@ -248,7 +250,7 @@
       </section>
     </div>
 
-    <!-- COLUNA DIREITA (5 cols): CHAT EM TEMPO REAL DOS CAMARADAS -->
+    <!-- COLUNA DIREITA: CHAT EM TEMPO REAL -->
     <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col h-[540px] lg:h-auto overflow-hidden">
       <div class="bg-[#f9e8cf] border-b-2 border-pencil p-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -263,10 +265,10 @@
         </span>
       </div>
 
-      <!-- Mensagens -->
+      <!-- Mensagens do Chat -->
       <div id="chat-messages-box" class="flex-1 overflow-y-auto p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]"></div>
 
-      <!-- Reações Rápidas -->
+      <!-- Botões de Envio Rápido -->
       <div class="px-3 py-1.5 bg-[#f9e8cf]/60 border-t border-pencil/20 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold">
         <button onclick="sendQuickChat('Olha a virada nas urnas! 🗳️🔥')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
           🗳️ Olha a virada!
@@ -274,12 +276,12 @@
         <button onclick="sendQuickChat('Acompanhando agarradinho com meu Camarada ☭💖')" class="bg-white hover:bg-red-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
           ☭💖 Juntinhos
         </button>
-        <button onclick="sendQuickChat('Hora de atualizar o painel! 🔄🐾')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
-          🔄 Atualizar!
+        <button onclick="sendQuickChat('Vai dar Brasil da Esperança! ⭐')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          ⭐ Esperança!
         </button>
       </div>
 
-      <!-- Input de Envio -->
+      <!-- Campo de Digitação -->
       <div class="p-3 bg-[#f9e8cf] border-t-2 border-pencil flex items-center gap-2">
         <input type="text" id="chat-input" maxlength="160" placeholder="Escreva para o seu Camarada..."
                class="flex-1 bg-white border-2 border-pencil rounded-2xl px-3 py-2 text-xs sm:text-sm font-hand text-pencil focus:outline-none focus:ring-2 focus:ring-red-600">
@@ -292,7 +294,7 @@
 
   </main>
 
-  <!-- 1. GERADOR SVG DOS GATINHOS (IDÊNTICO AO PRINCIPAL) -->
+  <!-- 1. GERADOR SVG DOS GATOS -->
   <script>
     function generateCatSvg(options = {}) {
       const {
@@ -401,35 +403,31 @@
     }
   </script>
 
-  <!-- 2. INTEGRAÇÃO COM A API OFICIAL DE RESULTADOS DO TSE (2º TURNO) -->
+  <!-- 2. TOTALIZAÇÃO DO TSE E DETECÇÃO DA VITÓRIA -->
   <script>
-    // Código oficial do 2º Turno da Eleição Geral de 2026 no TSE: 6258
     const TSE_ELECTION_CODE = '006258';
     const TSE_CYCLE = 'ele2026';
+    let celebrationTriggered = false;
 
     function onChangeFilter() {
       const cargo = document.getElementById('cargo-select').value;
       const ufSelect = document.getElementById('uf-select');
-      if (cargo === '0003') {
-        ufSelect.classList.remove('hidden');
-      } else {
-        ufSelect.classList.add('hidden');
-      }
+      if (cargo === '0003') ufSelect.classList.remove('hidden');
+      else ufSelect.classList.add('hidden');
       fetchTseResults(true);
     }
 
     async function fetchTseResults(manual = false) {
-      const cargo = document.getElementById('cargo-select').value; // 0001 = Presidente, 0003 = Governador
+      const cargo = document.getElementById('cargo-select').value;
       const uf = cargo === '0001' ? 'br' : document.getElementById('uf-select').value.toLowerCase();
       const statusTxt = document.getElementById('eleicao-status-txt');
       if (manual && statusTxt) statusTxt.innerText = 'Consultando dados oficiais do TSE... 🔄';
 
-      // Padrão de URL de arquivos JSON consolidados do TSE
       const url = `https://resultados.tse.jus.br/oficial/${TSE_CYCLE}/${TSE_ELECTION_CODE}/dados-simplificados/${uf}/${uf}-c${cargo}-e${TSE_ELECTION_CODE}-r.json`;
 
       try {
         const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('Dados ainda em preparação ou horário anterior às 17h');
+        if (!res.ok) throw new Error('Dados em processamento');
         const data = await res.json();
         renderTseData(data);
       } catch (err) {
@@ -459,14 +457,14 @@
         return;
       }
 
+      const uf = document.getElementById('cargo-select').value === '0001' ? 'BR' : document.getElementById('uf-select').value.toUpperCase();
+
       candList.forEach((c, idx) => {
         const pct = parseFloat(String(c.pvap || '0').replace(',', '.')) || 0;
         const isEleito = c.e === 's';
         const card = document.createElement('div');
         card.className = `p-3 rounded-2xl border-2 border-pencil ${idx === 0 ? 'bg-amber-50' : 'bg-white'} space-y-2 shadow-sm`;
 
-        // URL da fotografia oficial fornecida no JSON ou fallback via número
-        const uf = document.getElementById('cargo-select').value === '0001' ? 'BR' : document.getElementById('uf-select').value.toUpperCase();
         const photoUrl = c.sqcand 
           ? `https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/foto/2026/${uf}/${c.sqcand}`
           : '';
@@ -474,7 +472,6 @@
         card.innerHTML = `
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <!-- Moldura com Foto Oficial do Candidato -->
               <div class="relative w-12 h-12 rounded-2xl border-2 border-pencil overflow-hidden bg-stone-200 flex-shrink-0 shadow-inner flex items-center justify-center">
                 <img src="${photoUrl}" 
                      alt="${c.nm || 'Candidato'}" 
@@ -500,13 +497,21 @@
             </div>
           </div>
 
-          <!-- Barra de Percentual -->
           <div class="w-full bg-stone-200 h-2.5 rounded-full border border-pencil overflow-hidden">
             <div class="h-full ${idx === 0 ? 'bg-red-700' : 'bg-amber-500'} transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
           </div>
         `;
         listEl.appendChild(card);
       });
+
+      // CONDIÇÃO DE VITÓRIA: 100% de urnas apuradas e Lula em primeiro lugar
+      const isFullCount = pctNum >= 100 || data.tf === 's';
+      const firstCandidateName = (candList[0]?.nm || '').toLowerCase();
+      const isLulaWinner = firstCandidateName.includes('lula');
+
+      if (isFullCount && isLulaWinner && !celebrationTriggered) {
+        startVictoryCelebration();
+      }
     }
 
     function renderTseWaitingFallback(cargo, uf) {
@@ -520,7 +525,6 @@
           </h4>
           <p class="text-[11px] text-pencil/80 leading-relaxed">
             A totalização oficial do 2º turno é liberada pelo Tribunal Superior Eleitoral a partir das <b>17h (horário de Brasília)</b>.
-            Caso o navegador bloqueie a leitura direta (CORS), você também pode consultar diretamente no portal oficial abaixo:
           </p>
           <div class="pt-1">
             <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener noreferrer"
@@ -535,7 +539,188 @@
     setInterval(() => fetchTseResults(false), 30000);
   </script>
 
-  <!-- 3. FIREBASE + ESTADO DOS GATINHOS + CHAT EM TEMPO REAL -->
+  <!-- 3. MOTOR DE FOGOS DE ARTIFÍCIO, CONFETES E MÚSICA -->
+  <script>
+    const fxCanvas = document.getElementById('fx-canvas');
+    const fxCtx = fxCanvas.getContext('2d');
+    let confettiList = [];
+    let fireworksList = [];
+    let fireworkParticles = [];
+    let celebrationActive = false;
+
+    function resizeCanvas() {
+      fxCanvas.width = window.innerWidth;
+      fxCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Inicia a celebração da vitória
+    function startVictoryCelebration() {
+      celebrationTriggered = true;
+      celebrationActive = true;
+
+      // Exibe banner de vitória
+      const banner = document.getElementById('victory-banner');
+      if (banner) banner.classList.remove('hidden');
+
+      // Toca a música da comemoração
+      playVictoryMusic();
+
+      // Fala dos gatinhos na bancada
+      const sp1 = document.getElementById('speech-cat1');
+      const sp2 = document.getElementById('speech-cat2');
+      if (sp1) sp1.innerText = "VITÓRIA DO POVO! VIVA O BRASIL! 🎆🚩";
+      if (sp2) sp2.innerText = "O AMOR VENCEU! COMEMORA CAMARADA! ☭💖";
+
+      // Dispara os primeiros fogos
+      for (let i = 0; i < 6; i++) {
+        setTimeout(launchFirework, i * 400);
+      }
+    }
+
+    function playVictoryMusic() {
+      const audio = document.getElementById('victory-audio');
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.play().catch(() => {
+        // Se o navegador bloquear o autoplay antes da interação do usuário
+        window.addEventListener('click', () => audio.play(), { once: true });
+      });
+    }
+
+    // Função de teste para conferir os efeitos na tela a qualquer hora
+    window.testVictoryCelebration = function() {
+      startVictoryCelebration();
+    };
+
+    // Confetes constantes caindo do topo
+    function spawnConfettiBatch() {
+      if (!celebrationActive) return;
+      const colors = ['#dc2626', '#fbbf24', '#f59e0b', '#ffffff', '#ef4444', '#10b981'];
+      for (let i = 0; i < 5; i++) {
+        confettiList.push({
+          x: Math.random() * fxCanvas.width,
+          y: -10,
+          w: Math.random() * 8 + 6,
+          h: Math.random() * 5 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: Math.random() * 3 - 1.5,
+          vy: Math.random() * 3 + 2.5,
+          rotation: Math.random() * 360,
+          rotationSpeed: Math.random() * 6 - 3
+        });
+      }
+    }
+
+    // Lançamento de fogos de artifício
+    function launchFirework() {
+      if (!celebrationActive) return;
+      fireworksList.push({
+        x: Math.random() * (fxCanvas.width - 200) + 100,
+        y: fxCanvas.height,
+        targetY: Math.random() * (fxCanvas.height * 0.45) + 60,
+        vy: -(Math.random() * 5 + 11),
+        color: ['#dc2626', '#fbbf24', '#f59e0b', '#ffffff', '#38bdf8'][Math.floor(Math.random() * 5)]
+      });
+    }
+
+    function explodeFirework(x, y, baseColor) {
+      const count = 55;
+      const colors = [baseColor, '#fbbf24', '#ffffff', '#ef4444'];
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.2;
+        const speed = Math.random() * 5 + 2;
+        fireworkParticles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1,
+          size: Math.random() * 3.5 + 2,
+          decay: Math.random() * 0.02 + 0.012
+        });
+      }
+    }
+
+    // Loop de renderização gráfica do Canvas
+    let confettiTimer = 0;
+    let fireworkTimer = 0;
+
+    function fxLoop() {
+      fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+
+      if (celebrationActive) {
+        confettiTimer++;
+        if (confettiTimer % 4 === 0) spawnConfettiBatch();
+
+        fireworkTimer++;
+        if (fireworkTimer % 45 === 0) launchFirework();
+      }
+
+      // 1. Atualizar e desenhar fogos subindo
+      for (let i = fireworksList.length - 1; i >= 0; i--) {
+        const fw = fireworksList[i];
+        fw.y += fw.vy;
+        fxCtx.fillStyle = fw.color;
+        fxCtx.beginPath();
+        fxCtx.arc(fw.x, fw.y, 3, 0, Math.PI * 2);
+        fxCtx.fill();
+
+        if (fw.y <= fw.targetY) {
+          explodeFirework(fw.x, fw.y, fw.color);
+          fireworksList.splice(i, 1);
+        }
+      }
+
+      // 2. Partículas da explosão dos fogos
+      for (let i = fireworkParticles.length - 1; i >= 0; i--) {
+        const p = fireworkParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.06; // Gravidade
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          fireworkParticles.splice(i, 1);
+          continue;
+        }
+
+        fxCtx.save();
+        fxCtx.globalAlpha = p.alpha;
+        fxCtx.fillStyle = p.color;
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fxCtx.fill();
+        fxCtx.restore();
+      }
+
+      // 3. Chuva constante de confetes
+      for (let i = confettiList.length - 1; i >= 0; i--) {
+        const c = confettiList[i];
+        c.x += c.vx;
+        c.y += c.vy;
+        c.rotation += c.rotationSpeed;
+
+        fxCtx.save();
+        fxCtx.translate(c.x, c.y);
+        fxCtx.rotate((c.rotation * Math.PI) / 180);
+        fxCtx.fillStyle = c.color;
+        fxCtx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h);
+        fxCtx.restore();
+
+        if (c.y > fxCanvas.height + 20) {
+          confettiList.splice(i, 1);
+        }
+      }
+
+      requestAnimationFrame(fxLoop);
+    }
+    fxLoop();
+  </script>
+
+  <!-- 4. FIREBASE E CHAT SINCRONIZADO -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -565,7 +750,6 @@
       letters: []
     };
 
-    // Carrega cache salvo pela aba principal
     try {
       const cached = JSON.parse(localStorage.getItem('casal_shared_state_cache') || '{}');
       if (cached.cat1) state.cat1 = { ...state.cat1, ...cached.cat1 };
@@ -592,8 +776,10 @@
       const lastFromCat2 = [...letters].reverse().find(l => l.from === 'cat2');
       const lastFromCat1 = [...letters].reverse().find(l => l.from === 'cat1');
 
-      if (lastFromCat2) document.getElementById('speech-cat1').innerText = `💌 "${lastFromCat2.text}"`;
-      if (lastFromCat1) document.getElementById('speech-cat2').innerText = `💌 "${lastFromCat1.text}"`;
+      if (!celebrationActive) {
+        if (lastFromCat2) document.getElementById('speech-cat1').innerText = `💌 "${lastFromCat2.text}"`;
+        if (lastFromCat1) document.getElementById('speech-cat2').innerText = `💌 "${lastFromCat1.text}"`;
+      }
 
       const box = document.getElementById('chat-messages-box');
       const badge = document.getElementById('msg-counter-badge');
@@ -625,7 +811,6 @@
     };
 
     window.petCat = function(targetCat, ev) {
-      if (ev) spawnHearts(ev.clientX, ev.clientY, 10);
       state[targetCat].expression = 'pet';
       renderCatsAndChat();
       setTimeout(() => {
@@ -654,7 +839,6 @@
       if (!Array.isArray(state.letters)) state.letters = [];
       state.letters.push(newMsg);
       renderCatsAndChat();
-      spawnHearts(window.innerWidth / 2, window.innerHeight / 2, 12);
 
       if (roomRef) {
         try {
@@ -682,54 +866,6 @@
         });
       } catch(e) {}
     }
-
-    // Efeito de corações ao clicar nos gatinhos ou enviar mensagem
-    const canvas = document.getElementById('fx-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize);
-    resize();
-
-    function spawnHearts(x, y, count = 8) {
-      for (let i = 0; i < count; i++) {
-        particles.push({
-          x: x + (Math.random() * 24 - 12),
-          y: y + (Math.random() * 20 - 10),
-          vx: Math.random() * 2 - 1,
-          vy: -(Math.random() * 2.2 + 1),
-          size: Math.random() * 10 + 10,
-          color: ['#dc2626', '#fbbf24', '#e63946'][Math.floor(Math.random() * 3)],
-          alpha: 1
-        });
-      }
-    }
-
-    function loopParticles() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = p.color;
-        const topH = p.size * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(0, topH);
-        ctx.bezierCurveTo(0, 0, -p.size/2, 0, -p.size/2, topH);
-        ctx.bezierCurveTo(-p.size/2, (p.size+topH)/2, 0, p.size, 0, p.size);
-        ctx.bezierCurveTo(0, p.size, p.size/2, (p.size+topH)/2, p.size/2, topH);
-        ctx.bezierCurveTo(p.size/2, 0, 0, 0, 0, topH);
-        ctx.fill();
-        ctx.restore();
-        p.x += p.vx;
-        p.y += p.vy;
-        p.alpha -= 0.018;
-        if (p.alpha <= 0) particles.splice(i, 1);
-      }
-      requestAnimationFrame(loopParticles);
-    }
-    loopParticles();
 
     window.addEventListener('DOMContentLoaded', () => {
       renderCatsAndChat();
