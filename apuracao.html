@@ -249,12 +249,10 @@
         </div>
       </section>
     </div>
-    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4 items-start z-10">
-<!-- COLUNA DIREITA: CHAT EM TEMPO REAL COM ALTURA TRAVADA NO BALÃO -->
-    <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col overflow-hidden shadow-lg">
-      
-      <!-- Topo do Chat -->
-      <div class="bg-[#f9e8cf] border-b-2 border-pencil p-3 flex items-center justify-between flex-shrink-0">
+
+    <!-- COLUNA DIREITA: CHAT EM TEMPO REAL -->
+    <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col h-[540px] lg:h-auto overflow-hidden">
+      <div class="bg-[#f9e8cf] border-b-2 border-pencil p-3 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-2xl">📻☭</span>
           <div>
@@ -267,14 +265,11 @@
         </span>
       </div>
 
-      <!-- CAIXA DE MENSAGENS COM SCROLL FIXO (Não deixa a página crescer) -->
-      <div id="chat-messages-box" 
-           style="height: 360px; max-height: 360px; overflow-y: auto;" 
-           class="p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]">
-      </div>
+      <!-- Mensagens do Chat -->
+      <div id="chat-messages-box" class="flex-1 overflow-y-auto p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]"></div>
 
       <!-- Botões de Envio Rápido -->
-      <div class="px-3 py-1.5 bg-[#f9e8cf]/60 border-t border-pencil/20 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold flex-shrink-0">
+      <div class="px-3 py-1.5 bg-[#f9e8cf]/60 border-t border-pencil/20 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold">
         <button onclick="sendQuickChat('Olha a virada nas urnas! 🗳️🔥')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
           🗳️ Olha a virada!
         </button>
@@ -287,7 +282,7 @@
       </div>
 
       <!-- Campo de Digitação -->
-      <div class="p-3 bg-[#f9e8cf] border-t-2 border-pencil flex items-center gap-2 flex-shrink-0">
+      <div class="p-3 bg-[#f9e8cf] border-t-2 border-pencil flex items-center gap-2">
         <input type="text" id="chat-input" maxlength="160" placeholder="Escreva para o seu Camarada..."
                class="flex-1 bg-white border-2 border-pencil rounded-2xl px-3 py-2 text-xs sm:text-sm font-hand text-pencil focus:outline-none focus:ring-2 focus:ring-red-600">
         <button onclick="sendChatMessage()" class="sketch-btn bg-red-700 hover:bg-red-800 text-amber-200 font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl flex items-center gap-1">
@@ -296,6 +291,8 @@
         </button>
       </div>
     </section>
+
+  </main>
 
   <!-- 1. GERADOR SVG DOS GATOS -->
   <script>
