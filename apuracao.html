@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Apuração 2º Turno 🗳️☭ União dos Camaradas Felinos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper: '#f7ebd9',
+            'paper-card': '#fff8ed',
+            pencil: '#2b1111'
+          },
+          fontFamily: {
+            hand: ['"Patrick Hand"', 'cursive'],
+            caveat: ['"Caveat"', 'cursive'],
+            sans: ['"Quicksand"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --charcoal: #2b1111;
+      --soviet-red: #b91c1c;
+    }
+    body {
+      background-color: #7f1d1d;
+      background-image: 
+        radial-gradient(circle, rgba(251, 191, 36, 0.22) 1.5px, transparent 1.5px),
+        linear-gradient(to right, rgba(251, 191, 36, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(251, 191, 36, 0.08) 1px, transparent 1px);
+      background-size: 24px 24px;
+      font-family: 'Quicksand', sans-serif;
+      color: var(--charcoal);
+      user-select: none;
+    }
+    .sketch-border {
+      border: 2.5px solid var(--charcoal);
+      box-shadow: 3px 4px 0 rgba(43, 17, 17, 0.92);
+    }
+    .sketch-btn {
+      border: 2px solid var(--charcoal);
+      box-shadow: 2px 3px 0 rgba(43, 17, 17, 0.95);
+      transition: all 0.15s ease-in-out;
+    }
+    .sketch-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0 1px 0 rgba(43, 17, 17, 0.95);
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.025, 0.98); }
+    }
+    @keyframes tailWag {
+      0% { transform: rotate(-6deg); }
+      50% { transform: rotate(5deg); }
+      100% { transform: rotate(-8deg); }
+    }
+    @keyframes naturalBlink {
+      0%, 94%, 98%, 100% { transform: scaleY(1); }
+      96% { transform: scaleY(0.08); }
+    }
+    .anim-body { animation: breathe 3.6s ease-in-out infinite; transform-origin: 100px 145px; }
+    .anim-tail { animation: tailWag 3.2s ease-in-out infinite alternate; transform-origin: 135px 150px; }
+    .anim-blink { animation: naturalBlink 4.2s infinite; transform-origin: 95px 95px; }
+    .chat-scroll::-webkit-scrollbar { width: 6px; }
+    .chat-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); border-radius: 8px; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #b91c1c; border-radius: 8px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-2 sm:p-4 overflow-x-hidden relative">
+
+  <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-20"></canvas>
+
+  <!-- CABEÇALHO -->
+  <header class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-3 bg-[#fff8ed] p-3 sm:p-4 rounded-2xl sketch-border z-30 border-t-4 border-t-red-700 mb-3">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-red-700 border-2 border-pencil flex items-center justify-center text-2xl text-amber-300 shadow-sm">
+        🗳️
+      </div>
+      <div>
+        <h1 class="font-caveat text-2xl sm:text-3xl font-bold leading-tight text-red-900">
+          Central de Apuração 2º Turno — Brasil 🇧🇷☭
+        </h1>
+        <p class="text-[11px] sm:text-xs text-pencil/80 font-bold flex items-center gap-1.5">
+          <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+          <span id="sync-status">Conectado ao Satélite Sputnik & Dados TSE</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap text-xs font-bold">
+      <button onclick="switchRoleQuick()" class="sketch-btn bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl flex items-center gap-1 text-red-950">
+        <span>🚩 Você é:</span>
+        <span id="my-role-badge" class="text-red-700 font-extrabold">Camarada 1</span>
+      </button>
+
+      <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener noreferrer" class="sketch-btn bg-white hover:bg-stone-100 px-3 py-1.5 rounded-xl text-pencil flex items-center gap-1">
+        <span>🔗 Portal Oficial TSE</span>
+      </a>
+
+      <a href="index.html" class="sketch-btn bg-red-700 hover:bg-red-800 text-amber-200 px-3 py-1.5 rounded-xl flex items-center gap-1">
+        <span>⬅ Voltar à Praça Vermelha</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL: GATINHOS + APURAÇÃO + CHAT -->
+  <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 z-10">
+
+    <!-- COLUNA ESQUERDA / CENTRO (7 cols): GATINHOS + PAINEL DE VOTOS -->
+    <div class="lg:col-span-7 flex flex-col gap-4">
+
+      <!-- PALCO DOS GATINHOS ASSISTINDO À APURAÇÃO -->
+      <section class="bg-[#f3dfc1] rounded-3xl sketch-border p-3 sm:p-4 relative overflow-hidden" style="box-shadow: inset 0 0 35px rgba(185, 28, 28, 0.18), 3px 4px 0 #2b1111;">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <span class="text-xs font-bold text-red-950 bg-[#fff8ed] px-2.5 py-0.5 rounded-full border border-pencil">
+            🐾 Bancada Felina de Acompanhamento
+          </span>
+          <span class="text-[11px] font-semibold text-red-900">Clique nos gatinhos para fazer carinho!</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 items-center">
+          <!-- Gatinho 1 -->
+          <div class="flex flex-col items-center bg-[#fff8ed]/70 p-2.5 rounded-2xl border border-red-900/20 relative">
+            <span id="cat1-name-badge" class="text-[11px] font-bold bg-amber-300 text-red-950 px-2.5 py-0.5 rounded-full border border-pencil mb-1">
+              ⭐ Camarada 1
+            </span>
+            <div id="speech-cat1" class="mb-1 px-2.5 py-1 rounded-xl bg-white border border-pencil text-xs font-hand text-center max-w-[190px] truncate shadow-sm">
+              De olho nas urnas! 🗳️🐾
+            </div>
+            <div id="cat1-svg-box" onclick="petCat('cat1', event)" class="w-28 h-28 sm:w-36 sm:h-36 cursor-pointer hover:scale-105 transition-transform"></div>
+          </div>
+
+          <!-- Gatinho 2 -->
+          <div class="flex flex-col items-center bg-[#fff8ed]/70 p-2.5 rounded-2xl border border-red-900/20 relative">
+            <span id="cat2-name-badge" class="text-[11px] font-bold bg-red-700 text-amber-200 px-2.5 py-0.5 rounded-full border border-pencil mb-1">
+              🚩 Camarada 2
+            </span>
+            <div id="speech-cat2" class="mb-1 px-2.5 py-1 rounded-xl bg-white border border-pencil text-xs font-hand text-center max-w-[190px] truncate shadow-sm">
+              Acompanhando com meu amor! 💖🗳️
+            </div>
+            <div id="cat2-svg-box" onclick="petCat('cat2', event)" class="w-28 h-28 sm:w-36 sm:h-36 cursor-pointer hover:scale-105 transition-transform"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAINEL DE APURAÇÃO DO 2º TURNO -->
+      <section class="bg-[#fff8ed] rounded-3xl sketch-border p-4 space-y-3 flex-1 flex flex-col justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-pencil/20 pb-2.5">
+          <div>
+            <h2 class="font-caveat text-2xl font-bold text-red-950 flex items-center gap-1.5">
+              <span>📊 Painel de Totalização — 2º Turno</span>
+            </h2>
+            <p id="tse-last-update" class="text-[11px] text-pencil/70 font-medium">
+              Fonte: API Oficial de Resultados do TSE (Eleição 6258)
+            </p>
+          </div>
+
+          <!-- Seletores de Cargo e UF -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <select id="cargo-select" onchange="onChangeFilter()" class="bg-white border-2 border-pencil rounded-xl px-2.5 py-1 text-xs font-bold text-red-950">
+              <option value="0001">Presidente (Nacional)</option>
+              <option value="0003">Governador (Por UF)</option>
+            </select>
+
+            <select id="uf-select" onchange="onChangeFilter()" class="hidden bg-white border-2 border-pencil rounded-xl px-2 py-1 text-xs font-bold text-red-950">
+              <option value="ac">AC</option>
+              <option value="al">AL</option>
+              <option value="am">AM</option>
+              <option value="ap">AP</option>
+              <option value="ba">BA</option>
+              <option value="ce">CE</option>
+              <option value="df">DF</option>
+              <option value="es">ES</option>
+              <option value="go">GO</option>
+              <option value="ma">MA</option>
+              <option value="mg">MG</option>
+              <option value="ms">MS</option>
+              <option value="mt">MT</option>
+              <option value="pa" selected>PA</option>
+              <option value="pb">PB</option>
+              <option value="pe">PE</option>
+              <option value="pi">PI</option>
+              <option value="pr">PR</option>
+              <option value="rj">RJ</option>
+              <option value="rn">RN</option>
+              <option value="ro">RO</option>
+              <option value="rr">RR</option>
+              <option value="rs">RS</option>
+              <option value="sc">SC</option>
+              <option value="se">SE</option>
+              <option value="sp">SP</option>
+              <option value="to">TO</option>
+            </select>
+
+            <button onclick="fetchTseResults(true)" class="sketch-btn bg-amber-300 hover:bg-amber-400 text-red-950 px-2.5 py-1 rounded-xl text-xs font-bold">
+              🔄 Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Barra de Seções Apuradas -->
+        <div class="bg-amber-50 border-2 border-pencil rounded-2xl p-3 space-y-1.5">
+          <div class="flex justify-between items-center text-xs font-bold text-red-950">
+            <span>Urnas / Seções Totalizadas:</span>
+            <span id="secoes-percent-txt" class="text-sm font-black text-red-700">--%</span>
+          </div>
+          <div class="w-full bg-stone-200 h-3 rounded-full border border-pencil overflow-hidden">
+            <div id="secoes-progress-bar" class="bg-gradient-to-r from-red-700 via-amber-500 to-emerald-600 h-full w-0 transition-all duration-500"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-pencil/70 font-semibold">
+            <span id="eleicao-status-txt">Aguardando atualização do TSE...</span>
+            <span>Atualização automática a cada 30s</span>
+          </div>
+        </div>
+
+        <!-- Lista de Candidatos -->
+        <div id="candidates-list" class="space-y-2.5 my-auto py-1">
+          <div class="text-center py-6 text-xs text-pencil/70 font-semibold">
+            Consultando servidor oficial do TSE... ⏳
+          </div>
+        </div>
+
+        <!-- Rodapé de Votos Brancos, Nulos e Válidos -->
+        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-pencil/20 text-center text-[11px] font-bold">
+          <div class="bg-white p-2 rounded-xl border border-pencil">
+            <span class="text-pencil/60 block text-[10px]">Votos Válidos</span>
+            <span id="votos-validos-txt" class="text-red-950">--</span>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-pencil">
+            <span class="text-pencil/60 block text-[10px]">Brancos</span>
+            <span id="votos-brancos-txt" class="text-stone-700">--</span>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-pencil">
+            <span class="text-pencil/60 block text-[10px]">Nulos</span>
+            <span id="votos-nulos-txt" class="text-stone-700">--</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- COLUNA DIREITA (5 cols): CHAT EM TEMPO REAL DOS CAMARADAS -->
+    <section class="lg:col-span-5 bg-[#fff8ed] rounded-3xl sketch-border flex flex-col h-[540px] lg:h-auto overflow-hidden">
+      <div class="bg-[#f9e8cf] border-b-2 border-pencil p-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📻☭</span>
+          <div>
+            <h3 class="font-caveat text-2xl font-bold text-red-950 leading-none">Rádio Pravda — Chat da Apuração</h3>
+            <p class="text-[11px] text-pencil/70 font-semibold">Comentem os votos em tempo real!</p>
+          </div>
+        </div>
+        <span id="msg-counter-badge" class="bg-red-700 text-amber-200 text-[10px] font-black px-2 py-0.5 rounded-full border border-pencil">
+          0 msgs
+        </span>
+      </div>
+
+      <!-- Mensagens -->
+      <div id="chat-messages-box" class="flex-1 overflow-y-auto p-3 space-y-2.5 chat-scroll bg-gradient-to-b from-[#fffaf2] to-[#f4e3c8]"></div>
+
+      <!-- Reações Rápidas -->
+      <div class="px-3 py-1.5 bg-[#f9e8cf]/60 border-t border-pencil/20 flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold">
+        <button onclick="sendQuickChat('Olha a virada nas urnas! 🗳️🔥')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          🗳️ Olha a virada!
+        </button>
+        <button onclick="sendQuickChat('Acompanhando agarradinho com meu Camarada ☭💖')" class="bg-white hover:bg-red-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          ☭💖 Juntinhos
+        </button>
+        <button onclick="sendQuickChat('Hora de atualizar o painel! 🔄🐾')" class="bg-white hover:bg-amber-100 border border-pencil px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          🔄 Atualizar!
+        </button>
+      </div>
+
+      <!-- Input de Envio -->
+      <div class="p-3 bg-[#f9e8cf] border-t-2 border-pencil flex items-center gap-2">
+        <input type="text" id="chat-input" maxlength="160" placeholder="Escreva para o seu Camarada..."
+               class="flex-1 bg-white border-2 border-pencil rounded-2xl px-3 py-2 text-xs sm:text-sm font-hand text-pencil focus:outline-none focus:ring-2 focus:ring-red-600">
+        <button onclick="sendChatMessage()" class="sketch-btn bg-red-700 hover:bg-red-800 text-amber-200 font-bold text-xs sm:text-sm px-4 py-2 rounded-2xl flex items-center gap-1">
+          <span>Enviar</span>
+          <span>☭</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 1. GERADOR SVG DOS GATINHOS (IDÊNTICO AO PRINCIPAL) -->
+  <script>
+    function generateCatSvg(options = {}) {
+      const {
+        breed = 'white',
+        outfit = 'none',
+        outfitColor = '#e63946',
+        accessory = 'none',
+        accessoryColor = '#e76f51',
+        expression = 'happy',
+        eyeShape = 'almond',
+        eyeColor = '#2b2725',
+        pupil = 'round',
+        pupilColor = '#ffffff',
+        mouth = 'cat',
+        isFlipped = false
+      } = options;
+
+      let bodyFill = '#fffdf9';
+      let strokeCol = '#2b2725';
+      let earInner = '#f7c2c2';
+
+      if (breed === 'orange') { bodyFill = '#f4a261'; earInner = '#e76f51'; }
+      else if (breed === 'tuxedo') { bodyFill = '#3d3a37'; }
+      else if (breed === 'siamese') { bodyFill = '#ebdcc9'; earInner = '#5d4037'; }
+
+      let extraMarkings = '';
+      if (breed === 'tuxedo') {
+        extraMarkings = `<polygon points="98,90 80,120 116,120" fill="#fffdf9" /><ellipse cx="98" cy="148" rx="20" ry="14" fill="#fffdf9" />`;
+      } else if (breed === 'orange') {
+        extraMarkings = `<path d="M 98,62 L 98,72 M 88,58 Q 92,68 86,75 M 108,58 Q 104,68 110,75" stroke="#b3581d" stroke-width="3.5" stroke-linecap="round" fill="none"/><ellipse cx="98" cy="144" rx="14" ry="10" fill="#fffdf9" />`;
+      } else if (breed === 'siamese') {
+        extraMarkings = `<polygon points="40,30 65,70 30,70" fill="#3d281d" opacity="0.8"/><polygon points="156,30 131,70 166,70" fill="#3d281d" opacity="0.8"/><path d="M 64,112 Q 98,78 132,112 Q 98,140 64,112 Z" fill="#3d281d" opacity="0.85"/>`;
+      }
+
+      const mainRed = outfitColor || '#e63946';
+      let outfitSvg = '';
+      if (outfit === 'red_dress') {
+        outfitSvg = `<g><path d="M 70,134 L 52,166 Q 98,174 146,166 L 128,134 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3" stroke-linejoin="round"/><path d="M 69,136 Q 98,141 129,136" fill="none" stroke="#800f17" stroke-width="4.5" stroke-linecap="round"/><circle cx="98" cy="138" r="3" fill="#fffdf9" stroke="${strokeCol}" stroke-width="1.5"/></g>`;
+      } else if (outfit === 'red_gown') {
+        outfitSvg = `<g><path d="M 68,134 C 54,144 46,158 46,168 Q 98,175 152,168 C 152,158 144,144 130,134 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3"/><path d="M 88,136 L 78,169 Q 98,172 118,169 L 108,136 Z" fill="#f7cad0" stroke="${strokeCol}" stroke-width="2"/></g>`;
+      } else if (outfit === 'red_sweater') {
+        outfitSvg = `<g><path d="M 64,134 C 56,146 58,164 66,166 L 132,166 C 140,164 142,146 134,134 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3"/><rect x="70" y="130" width="56" height="9" rx="4.5" fill="#b51724" stroke="${strokeCol}" stroke-width="2.5"/></g>`;
+      } else if (outfit === 'red_hoodie') {
+        outfitSvg = `<g><path d="M 63,134 C 55,148 57,164 66,166 L 132,166 C 141,164 143,148 135,134 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3"/><path d="M 80,150 L 116,150 L 120,163 L 76,163 Z" fill="#b51724" stroke="${strokeCol}" stroke-width="2"/></g>`;
+      } else if (outfit === 'red_overalls') {
+        outfitSvg = `<g><path d="M 74,142 L 122,142 L 128,166 L 68,166 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3"/></g>`;
+      } else if (outfit === 'red_cape') {
+        outfitSvg = `<g><path d="M 66,133 C 50,144 46,160 52,167 Q 75,171 94,166 L 98,140 L 102,166 Q 121,171 144,167 C 150,160 146,144 130,133 Z" fill="${mainRed}" stroke="${strokeCol}" stroke-width="3"/></g>`;
+      }
+
+      let accessorySvg = '';
+      if (accessory === 'bowtie') {
+        accessorySvg = `<g transform="translate(0, 10)"><polygon points="85,122 85,136 98,129" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/><polygon points="111,122 111,136 98,129" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2"/><circle cx="98" cy="129" r="4" fill="#f4a261" stroke="${strokeCol}" stroke-width="1.5"/></g>`;
+      } else if (accessory === 'glasses') {
+        accessorySvg = `<g><circle cx="72" cy="98" r="18" fill="none" stroke="${accessoryColor}" stroke-width="3"/><circle cx="124" cy="98" r="18" fill="none" stroke="${accessoryColor}" stroke-width="3"/><path d="M 90,98 Q 98,92 106,98" fill="none" stroke="${accessoryColor}" stroke-width="3"/></g>`;
+      } else if (accessory === 'flower') {
+        accessorySvg = `<g transform="translate(10, -5)"><circle cx="58" cy="50" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/><circle cx="66" cy="46" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/><circle cx="72" cy="54" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/><circle cx="66" cy="60" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/><circle cx="58" cy="58" r="5" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="1.5"/><circle cx="64" cy="54" r="3.5" fill="#f4a261"/></g>`;
+      } else if (accessory === 'star') {
+        const starFill = (accessoryColor && accessoryColor !== '#e76f51') ? accessoryColor : '#ffd166';
+        accessorySvg = `<g transform="translate(8, -6)"><polygon points="64,38 68,46 77,47 70,53 72,62 64,57 56,62 58,53 51,47 60,46" fill="${starFill}" stroke="${strokeCol}" stroke-width="2" stroke-linejoin="round"/></g>`;
+      } else if (accessory === 'crown') {
+        accessorySvg = `<g transform="translate(0, -6)"><path d="M 66,54 Q 98,28 130,54 L 126,66 Q 98,58 70,66 Z" fill="${accessoryColor}" stroke="${strokeCol}" stroke-width="2.5" stroke-linejoin="round"/><polygon points="98,38 100.5,43.5 106.5,44 102,48 103.5,54 98,50.5 92.5,54 94,48 89.5,44 95.5,43.5" fill="#fbbf24" stroke="${strokeCol}" stroke-width="1.2"/></g>`;
+      }
+
+      let eyeBase = `<ellipse cx="72" cy="98" rx="14" ry="18" fill="${eyeColor}" /><ellipse cx="124" cy="98" rx="14" ry="18" fill="${eyeColor}" />`;
+      if (eyeShape === 'round') eyeBase = `<circle cx="72" cy="98" r="17" fill="${eyeColor}" /><circle cx="124" cy="98" r="17" fill="${eyeColor}" />`;
+
+      let pupilSvg = `<circle cx="76" cy="94" r="5" fill="${pupilColor}" /><circle cx="128" cy="94" r="5" fill="${pupilColor}" />`;
+      if (pupil === 'heart') {
+        pupilSvg = `<path d="M 72,96 C 72,92 68,90 66,94 C 64,98 72,102 72,104 C 72,102 80,98 78,94 C 76,90 72,92 72,96 Z" fill="${pupilColor}" /><path d="M 124,96 C 124,92 120,90 118,94 C 116,98 124,102 124,104 C 124,102 132,98 130,94 C 128,90 124,92 124,96 Z" fill="${pupilColor}" />`;
+      }
+
+      let eyesSvg = `${eyeBase}${pupilSvg}`;
+      if (expression === 'pet') {
+        eyesSvg = `<path d="M 60,100 Q 72,86 84,100" fill="none" stroke="${strokeCol}" stroke-width="4.5" stroke-linecap="round" /><path d="M 112,100 Q 124,86 136,100" fill="none" stroke="${strokeCol}" stroke-width="4.5" stroke-linecap="round" />`;
+      }
+
+      let mouthSvg = `<path d="M 94,118 Q 98,122 102,118" fill="none" stroke="${strokeCol}" stroke-width="2.5" stroke-linecap="round" />`;
+      if (mouth === 'smile') mouthSvg = `<path d="M 92,116 Q 98,124 104,116" fill="none" stroke="${strokeCol}" stroke-width="2.8" stroke-linecap="round"/>`;
+
+      const flipTransform = isFlipped ? 'transform="scale(-1, 1) translate(-200, 0)"' : '';
+
+      return `
+        <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-md select-none">
+          <g ${flipTransform}>
+            <g class="anim-tail">
+              <path d="M 134,152 C 162,150 180,134 172,118 C 165,106 152,114 148,126 C 144,136 134,146 130,154 Z" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3.8" />
+            </g>
+            <g class="anim-body">
+              <path d="M 64,136 C 56,152 56,168 68,172 C 78,175 84,164 88,152 C 94,152 104,152 110,152 C 114,164 120,175 130,172 C 142,168 140,152 134,136 Z" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="4" />
+              <path d="M 44,82 C 40,54 44,38 52,42 C 64,48 82,70 98,70 C 114,70 132,48 144,42 C 152,38 156,54 152,82 C 160,112 142,138 98,138 C 54,138 36,112 44,82 Z" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="4" />
+              <polygon points="52,46 64,54 52,68" fill="${earInner}" opacity="0.65" />
+              <polygon points="144,46 132,54 144,68" fill="${earInner}" opacity="0.65" />
+              ${extraMarkings}
+              <g class="anim-blink">${eyesSvg}</g>
+              <polygon points="95,112 101,112 98,116" fill="#e76f51" />
+              ${mouthSvg}
+              ${outfitSvg}
+              <ellipse cx="82" cy="165" rx="8" ry="6" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3" />
+              <ellipse cx="114" cy="165" rx="8" ry="6" fill="${bodyFill}" stroke="${strokeCol}" stroke-width="3" />
+              ${accessorySvg}
+            </g>
+          </g>
+        </svg>
+      `;
+    }
+  </script>
+
+  <!-- 2. INTEGRAÇÃO COM A API OFICIAL DE RESULTADOS DO TSE (2º TURNO) -->
+  <script>
+    // Código oficial do 2º Turno da Eleição Geral de 2026 no TSE: 6258
+    const TSE_ELECTION_CODE = '006258';
+    const TSE_CYCLE = 'ele2026';
+
+    function onChangeFilter() {
+      const cargo = document.getElementById('cargo-select').value;
+      const ufSelect = document.getElementById('uf-select');
+      if (cargo === '0003') {
+        ufSelect.classList.remove('hidden');
+      } else {
+        ufSelect.classList.add('hidden');
+      }
+      fetchTseResults(true);
+    }
+
+    async function fetchTseResults(manual = false) {
+      const cargo = document.getElementById('cargo-select').value; // 0001 = Presidente, 0003 = Governador
+      const uf = cargo === '0001' ? 'br' : document.getElementById('uf-select').value.toLowerCase();
+      const statusTxt = document.getElementById('eleicao-status-txt');
+      if (manual && statusTxt) statusTxt.innerText = 'Consultando dados oficiais do TSE... 🔄';
+
+      // Padrão de URL de arquivos JSON consolidados do TSE
+      const url = `https://resultados.tse.jus.br/oficial/${TSE_CYCLE}/${TSE_ELECTION_CODE}/dados-simplificados/${uf}/${uf}-c${cargo}-e${TSE_ELECTION_CODE}-r.json`;
+
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Dados ainda em preparação ou horário anterior às 17h');
+        const data = await res.json();
+        renderTseData(data);
+      } catch (err) {
+        renderTseWaitingFallback(cargo, uf);
+      }
+    }
+
+    function renderTseData(data) {
+      const pst = data.pst || '0,00';
+      const pctNum = parseFloat(String(pst).replace(',', '.')) || 0;
+
+      document.getElementById('secoes-percent-txt').innerText = `${pst}%`;
+      document.getElementById('secoes-progress-bar').style.width = `${ Math.min(100, pctNum) }%`;
+      document.getElementById('tse-last-update').innerText = `Última atualização oficial TSE: ${data.dt || '--'} às ${data.ht || '--'}`;
+      document.getElementById('eleicao-status-txt').innerText = data.tf === 's' ? '✅ Totalização Finalizada' : '⏳ Apuração em andamento';
+
+      document.getElementById('votos-validos-txt').innerText = `${data.vv || '0'} (${data.pvv || '0%'})`;
+      document.getElementById('votos-brancos-txt').innerText = `${data.vb || '0'} (${data.pvb || '0%'})`;
+      document.getElementById('votos-nulos-txt').innerText = `${data.tvn || '0'} (${data.ptvn || '0%'})`;
+
+      const listEl = document.getElementById('candidates-list');
+      listEl.innerHTML = '';
+
+      const candList = Array.isArray(data.cand) ? data.cand : [];
+      if (candList.length === 0) {
+        listEl.innerHTML = `<div class="text-center py-4 text-xs font-bold text-pencil/70">Nenhum candidato retornado neste arquivo.</div>`;
+        return;
+      }
+
+      candList.forEach((c, idx) => {
+        const pct = parseFloat(String(c.pvap || '0').replace(',', '.')) || 0;
+        const isEleito = c.e === 's';
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-2xl border-2 border-pencil ${idx === 0 ? 'bg-amber-50' : 'bg-white'} space-y-1.5 shadow-sm`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-red-700 text-amber-200 font-black text-xs flex items-center justify-center border border-pencil">
+                ${c.n || '--'}
+              </span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-sm text-red-950">${c.nm || 'Candidato'}</span>
+                  ${isEleito ? '<span class="bg-emerald-500 text-white text-[10px] px-2 py-0.2 rounded-full font-black">ELEITO</span>' : ''}
+                </div>
+                <span class="text-[11px] font-bold text-pencil/60">${c.cc || ''}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-base font-black text-red-800 block">${c.pvap || '0,00'}%</span>
+              <span class="text-[10px] font-bold text-pencil/70">${Number(c.vap || 0).toLocaleString('pt-BR')} votos</span>
+            </div>
+          </div>
+          <div class="w-full bg-stone-200 h-2.5 rounded-full border border-pencil overflow-hidden">
+            <div class="h-full ${idx === 0 ? 'bg-red-700' : 'bg-amber-500'} transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function renderTseWaitingFallback(cargo, uf) {
+      document.getElementById('eleicao-status-txt').innerText = 'A divulgação oficial do 2º turno inicia a partir das 17h (horário de Brasília).';
+      const listEl = document.getElementById('candidates-list');
+      listEl.innerHTML = `
+        <div class="bg-amber-50 border-2 border-dashed border-red-700 rounded-2xl p-4 text-center space-y-2">
+          <span class="text-3xl block">🗳️⏳</span>
+          <h4 class="font-bold text-xs sm:text-sm text-red-950">
+            Aguardando abertura dos dados pelo TSE (${cargo === '0001' ? 'Presidente - BR' : 'Governador - ' + uf.toUpperCase()})
+          </h4>
+          <p class="text-[11px] text-pencil/80 leading-relaxed">
+            A totalização oficial do 2º turno é liberada pelo Tribunal Superior Eleitoral a partir das <b>17h (horário de Brasília)</b>.
+            Caso o navegador bloqueie a leitura direta (CORS), você também pode consultar diretamente no portal oficial abaixo:
+          </p>
+          <div class="pt-1">
+            <a href="https://resultados.tse.jus.br/oficial/app/index.html" target="_blank" rel="noopener noreferrer"
+               class="inline-block sketch-btn bg-red-700 hover:bg-red-800 text-amber-200 text-xs font-bold px-4 py-1.5 rounded-xl">
+              Abrir Resultados TSE Oficial ↗️
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    setInterval(() => fetchTseResults(false), 30000);
+  </script>
+
+  <!-- 3. FIREBASE + ESTADO DOS GATINHOS + CHAT EM TEMPO REAL -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { initializeFirestore, doc, setDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    try { setLogLevel('silent'); } catch(e) {}
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQKozcgf4N70cxUiUGJekGcUTClU2Httg",
+      authDomain: "jardim-gatos-teste.firebaseapp.com",
+      projectId: "jardim-gatos-teste",
+      storageBucket: "jardim-gatos-teste.firebasestorage.app",
+      messagingSenderId: "257294626705",
+      appId: "1:257294626705:web:130481b8778d8a9eceb430",
+      measurementId: "G-87FZWZWHXX"
+    };
+
+    const appId = "jardim-dos-gatos-casal";
+    const fixedRoomId = "ninho_de_amor_fixo";
+
+    let myRole = localStorage.getItem('casal_meu_gatinho') || 'cat1';
+
+    let state = {
+      nicknames: { cat1: 'Camarada 1', cat2: 'Camarada 2' },
+      cat1: { breed: 'white', outfit: 'none', outfitColor: '#e63946', accessory: 'star', accessoryColor: '#ffd166', expression: 'happy' },
+      cat2: { breed: 'white', outfit: 'none', outfitColor: '#e63946', accessory: 'star', accessoryColor: '#ffd166', expression: 'happy' },
+      letters: []
+    };
+
+    // Carrega cache salvo pela aba principal
+    try {
+      const cached = JSON.parse(localStorage.getItem('casal_shared_state_cache') || '{}');
+      if (cached.cat1) state.cat1 = { ...state.cat1, ...cached.cat1 };
+      if (cached.cat2) state.cat2 = { ...state.cat2, ...cached.cat2 };
+      if (cached.nicknames) state.nicknames = { ...state.nicknames, ...cached.nicknames };
+      if (Array.isArray(cached.letters)) state.letters = cached.letters;
+    } catch(e) {}
+
+    let db = null;
+    let roomRef = null;
+
+    function renderCatsAndChat() {
+      const nick1 = state.nicknames?.cat1 || 'Camarada 1';
+      const nick2 = state.nicknames?.cat2 || 'Camarada 2';
+
+      document.getElementById('cat1-name-badge').innerText = `⭐ ${nick1}`;
+      document.getElementById('cat2-name-badge').innerText = `🚩 ${nick2}`;
+      document.getElementById('my-role-badge').innerText = myRole === 'cat1' ? nick1 : nick2;
+
+      document.getElementById('cat1-svg-box').innerHTML = generateCatSvg({ ...state.cat1, isFlipped: false });
+      document.getElementById('cat2-svg-box').innerHTML = generateCatSvg({ ...state.cat2, isFlipped: true });
+
+      const letters = state.letters || [];
+      const lastFromCat2 = [...letters].reverse().find(l => l.from === 'cat2');
+      const lastFromCat1 = [...letters].reverse().find(l => l.from === 'cat1');
+
+      if (lastFromCat2) document.getElementById('speech-cat1').innerText = `💌 "${lastFromCat2.text}"`;
+      if (lastFromCat1) document.getElementById('speech-cat2').innerText = `💌 "${lastFromCat1.text}"`;
+
+      const box = document.getElementById('chat-messages-box');
+      const badge = document.getElementById('msg-counter-badge');
+      if (badge) badge.innerText = `${letters.length} msgs`;
+
+      if (box) {
+        box.innerHTML = '';
+        letters.forEach(l => {
+          const isMe = l.from === myRole;
+          const authorName = l.from === 'cat1' ? nick1 : nick2;
+          const div = document.createElement('div');
+          div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+          div.innerHTML = `
+            <div class="p-2.5 rounded-2xl border-2 border-pencil text-xs sm:text-sm font-hand max-w-[82%] shadow-sm ${isMe ? 'bg-amber-100 text-red-950' : 'bg-white text-pencil'}">
+              <span class="text-[10px] font-sans font-bold block opacity-70">${authorName} • ${l.time || ''}</span>
+              <p class="pt-0.5">${l.text}</p>
+            </div>
+          `;
+          box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    window.switchRoleQuick = function() {
+      myRole = myRole === 'cat1' ? 'cat2' : 'cat1';
+      localStorage.setItem('casal_meu_gatinho', myRole);
+      renderCatsAndChat();
+    };
+
+    window.petCat = function(targetCat, ev) {
+      if (ev) spawnHearts(ev.clientX, ev.clientY, 10);
+      state[targetCat].expression = 'pet';
+      renderCatsAndChat();
+      setTimeout(() => {
+        state[targetCat].expression = 'happy';
+        renderCatsAndChat();
+      }, 900);
+    };
+
+    window.sendChatMessage = async function() {
+      const input = document.getElementById('chat-input');
+      const txt = (input?.value || '').trim();
+      if (!txt) return;
+      input.value = '';
+      await pushMessage(txt);
+    };
+
+    window.sendQuickChat = async function(txt) {
+      await pushMessage(txt);
+    };
+
+    async function pushMessage(text) {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} • 🗳️ 2º Turno`;
+      const newMsg = { id: Date.now(), from: myRole, text, time: timeStr };
+
+      if (!Array.isArray(state.letters)) state.letters = [];
+      state.letters.push(newMsg);
+      renderCatsAndChat();
+      spawnHearts(window.innerWidth / 2, window.innerHeight / 2, 12);
+
+      if (roomRef) {
+        try {
+          await setDoc(roomRef, { letters: state.letters, updatedAt: Date.now() }, { merge: true });
+        } catch(e) {}
+      }
+    }
+
+    async function initCloud() {
+      try {
+        const app = initializeApp(firebaseConfig);
+        db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true, ignoreUndefinedProperties: true });
+        try { await signInAnonymously(getAuth(app)); } catch(e) {}
+
+        roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', fixedRoomId);
+        onSnapshot(roomRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.cat1) state.cat1 = { ...state.cat1, ...data.cat1 };
+            if (data.cat2) state.cat2 = { ...state.cat2, ...data.cat2 };
+            if (data.nicknames) state.nicknames = { ...state.nicknames, ...data.nicknames };
+            if (Array.isArray(data.letters)) state.letters = data.letters;
+            renderCatsAndChat();
+          }
+        });
+      } catch(e) {}
+    }
+
+    // Efeito de corações ao clicar nos gatinhos ou enviar mensagem
+    const canvas = document.getElementById('fx-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function spawnHearts(x, y, count = 8) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x + (Math.random() * 24 - 12),
+          y: y + (Math.random() * 20 - 10),
+          vx: Math.random() * 2 - 1,
+          vy: -(Math.random() * 2.2 + 1),
+          size: Math.random() * 10 + 10,
+          color: ['#dc2626', '#fbbf24', '#e63946'][Math.floor(Math.random() * 3)],
+          alpha: 1
+        });
+      }
+    }
+
+    function loopParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        const topH = p.size * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(0, topH);
+        ctx.bezierCurveTo(0, 0, -p.size/2, 0, -p.size/2, topH);
+        ctx.bezierCurveTo(-p.size/2, (p.size+topH)/2, 0, p.size, 0, p.size);
+        ctx.bezierCurveTo(0, p.size, p.size/2, (p.size+topH)/2, p.size/2, topH);
+        ctx.bezierCurveTo(p.size/2, 0, 0, 0, 0, topH);
+        ctx.fill();
+        ctx.restore();
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.018;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+      requestAnimationFrame(loopParticles);
+    }
+    loopParticles();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCatsAndChat();
+      initCloud();
+      fetchTseResults(false);
+
+      document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          window.sendChatMessage();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
