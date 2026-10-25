@@ -442,7 +442,7 @@
       const pctNum = parseFloat(String(pst).replace(',', '.')) || 0;
 
       document.getElementById('secoes-percent-txt').innerText = `${pst}%`;
-      document.getElementById('secoes-progress-bar').style.width = `${ Math.min(100, pctNum) }%`;
+      document.getElementById('secoes-progress-bar').style.width = `${Math.min(100, pctNum)}%`;
       document.getElementById('tse-last-update').innerText = `Última atualização oficial TSE: ${data.dt || '--'} às ${data.ht || '--'}`;
       document.getElementById('eleicao-status-txt').innerText = data.tf === 's' ? '✅ Totalização Finalizada' : '⏳ Apuração em andamento';
 
@@ -463,26 +463,44 @@
         const pct = parseFloat(String(c.pvap || '0').replace(',', '.')) || 0;
         const isEleito = c.e === 's';
         const card = document.createElement('div');
-        card.className = `p-3 rounded-2xl border-2 border-pencil ${idx === 0 ? 'bg-amber-50' : 'bg-white'} space-y-1.5 shadow-sm`;
+        card.className = `p-3 rounded-2xl border-2 border-pencil ${idx === 0 ? 'bg-amber-50' : 'bg-white'} space-y-2 shadow-sm`;
+
+        // URL da fotografia oficial fornecida no JSON ou fallback via número
+        const uf = document.getElementById('cargo-select').value === '0001' ? 'BR' : document.getElementById('uf-select').value.toUpperCase();
+        const photoUrl = c.sqcand 
+          ? `https://divulgacandcontas.tse.jus.br/divulga/rest/v1/candidatura/buscar/foto/2026/${uf}/${c.sqcand}`
+          : '';
+
         card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="w-8 h-8 rounded-xl bg-red-700 text-amber-200 font-black text-xs flex items-center justify-center border border-pencil">
-                ${c.n || '--'}
-              </span>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <!-- Moldura com Foto Oficial do Candidato -->
+              <div class="relative w-12 h-12 rounded-2xl border-2 border-pencil overflow-hidden bg-stone-200 flex-shrink-0 shadow-inner flex items-center justify-center">
+                <img src="${photoUrl}" 
+                     alt="${c.nm || 'Candidato'}" 
+                     class="w-full h-full object-cover"
+                     onerror="this.onerror=null; this.src=''; this.parentElement.innerHTML='<span class=\\'font-black text-xs text-red-950\\'>${c.n || '👤'}</span>';">
+                <span class="absolute bottom-0 right-0 bg-red-700 text-amber-200 font-black text-[9px] px-1 rounded-tl-md border-t border-l border-pencil">
+                  ${c.n || '--'}
+                </span>
+              </div>
+
               <div>
-                <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-sm text-red-950">${c.nm || 'Candidato'}</span>
-                  ${isEleito ? '<span class="bg-emerald-500 text-white text-[10px] px-2 py-0.2 rounded-full font-black">ELEITO</span>' : ''}
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-bold text-sm text-red-950 leading-tight">${c.nm || 'Candidato'}</span>
+                  ${isEleito ? '<span class="bg-emerald-600 text-white text-[9px] px-2 py-0.2 rounded-full font-black tracking-wide">ELEITO</span>' : ''}
                 </div>
-                <span class="text-[11px] font-bold text-pencil/60">${c.cc || ''}</span>
+                <span class="text-[11px] font-bold text-pencil/60 block">${c.cc || ''}</span>
               </div>
             </div>
-            <div class="text-right">
-              <span class="text-base font-black text-red-800 block">${c.pvap || '0,00'}%</span>
+
+            <div class="text-right flex-shrink-0">
+              <span class="text-base sm:text-lg font-black text-red-800 block">${c.pvap || '0,00'}%</span>
               <span class="text-[10px] font-bold text-pencil/70">${Number(c.vap || 0).toLocaleString('pt-BR')} votos</span>
             </div>
           </div>
+
+          <!-- Barra de Percentual -->
           <div class="w-full bg-stone-200 h-2.5 rounded-full border border-pencil overflow-hidden">
             <div class="h-full ${idx === 0 ? 'bg-red-700' : 'bg-amber-500'} transition-all duration-500" style="width: ${Math.min(100, pct)}%"></div>
           </div>
